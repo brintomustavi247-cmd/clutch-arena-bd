@@ -1,6 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
 import { calculateMatchEconomics, calculateJoinCost } from './utils'
-import { auth, onAuthStateChanged } from '../firebase'
+import { auth } from '../firebase'
+import { onAuthStateChanged } from 'firebase/auth'
 
 const AppContext = createContext(null)
 
@@ -111,7 +112,7 @@ const initialState = {
   adminPayments: saved?.adminPayments || INITIAL_ADMIN_PAYMENTS,
   pendingWithdrawals: saved?.pendingWithdrawals || INITIAL_PENDING_WITHDRAWALS,
   activityLog: saved?.activityLog || [],
-  currentView: 'login',
+  currentView: (saved?.isLoggedIn && saved?.currentUser) ? (saved.currentUser.role === 'owner' ? 'admin-overview' : 'dashboard') : 'login',
   viewParam: null,
   matchFilter: 'all',
   adminTab: 'admin-overview',
@@ -203,12 +204,12 @@ function reducer(state, action) {
       let existingUser = state.users.find(u => u.firebaseUid === firebaseUser.uid)
 
       if (existingUser) {
-        // Existing user — log them in
+        // Existing user — log them in (don't touch currentView if already logged in)
         return {
           ...state,
           isLoggedIn: true,
           currentUser: existingUser,
-          currentView: existingUser.role === 'owner' ? 'admin-overview' : 'dashboard',
+          currentView: state.isLoggedIn ? state.currentView : (existingUser.role === 'owner' ? 'admin-overview' : 'dashboard'),
           loading: false,
           modal: null,
         }
@@ -645,10 +646,15 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const h = () => {
       const { view, param } = parseHash()
+      if ((view === 'login' || view === 'admin-login') && saved?.isLoggedIn) return
       dispatch({ type: 'NAVIGATE', payload: { view, param } })
     }
     const { view, param } = parseHash()
-    dispatch({ type: 'NAVIGATE', payload: { view, param } })
+    if ((view === 'login' || view === 'admin-login') && saved?.isLoggedIn) {
+      // skip — don't override restored dashboard/admin view with #login hash
+    } else {
+      dispatch({ type: 'NAVIGATE', payload: { view, param } })
+    }
     window.addEventListener('hashchange', h)
     return () => window.removeEventListener('hashchange', h)
   }, [])
