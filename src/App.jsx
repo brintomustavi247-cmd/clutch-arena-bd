@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AppProvider, useApp } from './context'
-import { auth } from './firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { firebaseReady } from './firebase'
 import Sidebar from './components/Sidebar'
 import MobileNav from './components/MobileNav'
 import RightPanel from './components/RightPanel'
@@ -42,7 +41,6 @@ function AuthGuard({ children }) {
   return children
 }
 
-// Check if current view is an admin route
 function isAdminView(view) {
   return view && view.startsWith('admin')
 }
@@ -156,16 +154,17 @@ function ViewRouter() {
 }
 
 export default function App() {
-  const [firebaseReady, setFirebaseReady] = useState(false)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setFirebaseReady(true)
+    // ✅ KEY FIX: Wait for persistence to be ready BEFORE rendering anything
+    // This guarantees onAuthStateChanged in context.jsx fires AFTER localStorage is enabled
+    firebaseReady.then(() => {
+      setReady(true)
     })
-    return () => unsubscribe()
   }, [])
 
-  if (!firebaseReady) {
+  if (!ready) {
     return (
       <div style={{ display: 'flex', minHeight: '100dvh', alignItems: 'center', justifyContent: 'center', background: '#0e0e10' }}>
         <div style={{ textAlign: 'center' }}>
