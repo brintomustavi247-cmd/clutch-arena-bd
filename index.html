@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0e0e10" />
+  <meta name="description" content="Clutch Arena BD — Free Fire Custom Room Tournament Platform. Join matches, win prizes, dominate the arena." />
+  <meta name="keywords" content="Free Fire, Custom Room, Tournament, Clutch Arena, Bangladesh, Esports, FF Tournament BD" />
+  <meta name="author" content="Clutch Arena BD" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="Clutch Arena BD — Free Fire Tournament Platform" />
+  <meta property="og:description" content="Join Free Fire custom room tournaments. Solo, Duo, Squad, Clash Squad. Real prizes, real competition." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/icons/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Clutch Arena BD" />
+  <meta name="twitter:description" content="Free Fire Custom Room Tournament Platform — Bangladesh" />
+
+  <!-- PWA Meta -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Clutch Arena" />
+  <meta name="application-name" content="Clutch Arena BD" />
+  <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120.png" />
+
+  <title>Clutch Arena BD</title>
+
+  <!-- ===== FONT PRECONNECTS ===== -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- ===== DESIGN SYSTEM FONTS ===== -->
+  <!-- Lexend — Hero titles, page titles, section headings, match titles -->
+  <!-- Inter — Stats, numbers, balance, body text, labels, timestamps -->
+  <!-- Plus Jakarta Sans — Body text, descriptions, UI elements -->
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <!-- Font Awesome 6 — Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <style>
+    /* ========================================
+       RESET
+    ======================================== */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ========================================
+       BASE
+    ======================================== */
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #0e0e10;
+      color: #e5e1e4;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    /* ========================================
+       CSS VARIABLES — MONOLITH DESIGN SYSTEM
+    ======================================== */
+    :root {
+      /* Font stack */
+      --font-hero: 'Lexend', sans-serif;
+      --font-heading: 'Lexend', sans-serif;
+      --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-label: 'Plus Jakarta Sans', sans-serif;
+      --font-number: 'Inter', sans-serif;
+      --font-mono: 'Inter', monospace;
+
+      /* 6-Level Background Depth */
+      --bg-deepest: #0e0e10;
+      --bg-base: #131315;
+      --bg-raised-low: #1c1b1d;
+      --bg-raised-mid: #201f21;
+      --bg-raised-high: #2a2a2c;
+      --bg-raised-highest: #353437;
+      --bg-bright: #39393b;
+
+      /* Card & Input */
+      --bg-card: #1c1b1d;
+      --bg-input: #1c1b1d;
+
+      /* Borders */
+      --border: rgba(255, 255, 255, 0.06);
+      --border-subtle: rgba(255, 255, 255, 0.03);
+      --border-hover: rgba(255, 255, 255, 0.1);
+
+      /* Primary Accent — Cyan */
+      --primary: #61cdff;
+      --primary-dark: #005572;
+      --primary-dim: #b4e4ff;
+      --primary-soft: rgba(97, 205, 255, 0.1);
+      --primary-muted: rgba(97, 205, 255, 0.15);
+
+      /* Secondary — Teal/Blue-Grey */
+      --secondary: #a7cce1;
+      --secondary-container: #264b5d;
+      --secondary-on: #96bacf;
+
+      /* Arena Accent — Red (nav dot only) */
+      --arena-accent: #e63946;
+
+      /* Text */
+      --text-primary: #e5e1e4;
+      --text-secondary: #bdc8cf;
+      --text-muted: #889299;
+      --text-dim: #555555;
+
+      /* Status */
+      --success: #4ade80;
+      --error: #f87171;
+      --warning: #facc15;
+      --info: #60a5fa;
+
+      /* Money */
+      --money-entry: #facc15;
+      --money-prize: #a78bfa;
+
+      /* Nav */
+      --nav-active: #e63946;
+      --nav-inactive: #555555;
+
+      /* Shadows — NO glow */
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+      --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.3);
+      --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.4);
+
+      /* Spacing */
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+
+      /* Radius */
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+    }
+
+    /* ========================================
+       ROOT CONTAINER + SAFE AREA
+    ======================================== */
+    #root {
+      min-height: 100vh;
+      min-height: 100dvh;
+      position: relative;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bottom);
+      padding-left: var(--safe-left);
+      padding-right: var(--safe-right);
+    }
+
+    /* ========================================
+       CUSTOM SCROLLBAR — Neutral Dark
+    ======================================== */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2a2a2c;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #353437;
+    }
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #2a2a2c transparent;
+    }
+
+    /* ========================================
+       SELECTION
+    ======================================== */
+    ::selection {
+      background: rgba(97, 205, 255, 0.2);
+      color: #fff;
+    }
+
+    /* ========================================
+       LOADING SCREEN — Clean Tactical
+    ======================================== */
+    .app-loading {
+      overflow: hidden;
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0e0e10;
+      z-index: 99999;
+      padding: 0 24px;
+      transition: opacity 0.5s ease;
+    }
+    .app-loading.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Logo — Lexend Bold, no glow */
+    .app-loading-logo {
+      font-family: 'Lexend', sans-serif;
+      font-size: clamp(26px, 8vw, 44px);
+      font-weight: 700;
+      color: #e5e1e4;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-align: center;
+      line-height: 1.1;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Subtitle */
+    .app-loading-sub {
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(11px, 2.5vw, 13px);
+      font-weight: 500;
+      color: #889299;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Tagline */
+    .app-loading-tag {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: clamp(9px, 2vw, 11px);
+      font-weight: 500;
+      color: #555555;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 4px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Progress bar */
+    .app-loading-bar-wrap {
+      margin-top: 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .app-loading-bar {
+      width: 160px;
+      height: 2px;
+      border-radius: 1px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .app-loading-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 35%;
+      height: 100%;
+      border-radius: 1px;
+      background: #e5e1e4;
+      animation: barSlide 1.6s ease-in-out infinite;
+    }
+
+    @keyframes barSlide {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(400%); }
+    }
+
+    .app-loading-pct {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      color: #555555;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    /* ========================================
+       KEYFRAME ANIMATIONS
+    ======================================== */
+    @keyframes shimmer {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 300% 50%; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes modalOverlayIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes modalSlideIn {
+      from { opacity: 0; transform: translateY(16px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes modalSlideOut {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 0; transform: translateY(16px) scale(0.97); }
+    }
+
+    @keyframes toastIn {
+      0% { transform: translateY(-16px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes toastOut {
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(-16px); opacity: 0; }
+    }
+
+    /* ========================================
+       UTILITY CLASSES
+    ======================================== */
+
+    /* Skeleton loader */
+    .skeleton {
+      background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 2s linear infinite;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Horizontal scroll — no scrollbar */
+    .h-scroll {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .h-scroll::-webkit-scrollbar { display: none; }
+
+    /* Match card grid */
+    .match-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 8px;
+    }
+
+    /* Money display */
+    .money-display {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    /* Heading display */
+    .heading-display {
+      font-family: 'Lexend', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: -0.025em;
+    }
+
+    /* Brand text */
+    .brand-text {
+      font-family: 'Lexend', sans-serif;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    /* ========================================
+       MOBILE STANDALONE / PWA OVERRIDES
+    ======================================== */
+    @media (display-mode: standalone) {
+      body {
+        padding-top: env(safe-area-inset-top);
+      }
+    }
+
+    @supports (padding-top: env(safe-area-inset-top)) {
+      .safe-area-top {
+        padding-top: env(safe-area-inset-top);
+      }
+      .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+    }
+
+    /* ========================================
+       REDUCED MOTION
+    ======================================== */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .app-loading-bar::after {
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- ===== LOADING SCREEN ===== -->
+  <div class="app-loading" id="app-loader">
+    <div class="app-loading-logo">CLUTCH ARENA</div>
+    <div class="app-loading-sub">Bangladesh</div>
+    <div class="app-loading-tag">Free Fire Tournament Platform</div>
+    <div class="app-loading-bar-wrap">
+      <div class="app-loading-bar"></div>
+      <div class="app-loading-pct">Loading</div>
+    </div>
+  </div>
+
+  <!-- ===== APP ROOT ===== -->
+  <div id="root"></div>
+
+  <!-- ===== LOADER DISMISS SCRIPT ===== -->
+  <script>
+    (function () {
+      function dismissLoader() {
+        var loader = document.getElementById('app-loader');
+        if (!loader) return;
+        loader.classList.add('hide');
+        setTimeout(function () {
+          if (loader.parentNode) loader.parentNode.removeChild(loader);
+        }, 500);
+      }
+
+      var loadTime = Date.now();
+      window.addEventListener('load', function () {
+        var elapsed = Date.now() - loadTime;
+        var delay = Math.max(0, 800 - elapsed);
+        setTimeout(dismissLoader, delay);
+      });
+
+      setTimeout(dismissLoader, 4000);
+    })();
+  </script>
+
+  <!-- ===== REACT ENTRY ===== -->
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
