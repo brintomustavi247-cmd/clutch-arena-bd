@@ -127,6 +127,17 @@ const initialState = {
 
 // ===== REDUCER =====
 function reducer(state, action) {
+  // 🛡️ ANTI-FLICKER SHIELD: Block ANY automatic logout for 5 seconds after refresh
+  const timeSinceLoad = Date.now() - (window.__APP_LOAD_TIME__ || 0);
+  if (timeSinceLoad < 5000) {
+    const testResult = _reducerLogic(state, action);
+    if (!testResult.isLoggedIn && state.isLoggedIn) return state; // BLOCKED!
+    return testResult;
+  }
+  return _reducerLogic(state, action);
+}
+
+function _reducerLogic(state, action) {
   switch (action.type) {
 
     case 'TICK':

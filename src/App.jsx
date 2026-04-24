@@ -1,4 +1,7 @@
+window.__APP_LOAD_TIME__ = Date.now();
+
 import { useState, useEffect } from 'react'
+// ... rest of your fileimport { useState, useEffect } from 'react'
 import { AppProvider, useApp } from './context'
 import { firebaseReady } from './firebase'
 import Sidebar from './components/Sidebar'
