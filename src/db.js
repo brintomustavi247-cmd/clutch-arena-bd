@@ -1,9 +1,9 @@
 import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from './firebase';
 
-// ════════════════════════════════════════
+// ══════════════════════════════════════
 //  USER DOCUMENTS
-// ════════════════════════════════════════
+// ══════════════════════════════════════
 
 export async function fetchUser(uid) {
   const userRef = doc(db, 'users', uid);
@@ -26,25 +26,38 @@ export async function updateUser(uid, data) {
   await updateDoc(userRef, data);
 }
 
-// ════════════════════════════════════════
+// ══════════════════════════════════════
 //  MATCH DOCUMENTS
-// ════════════════════════════════════════
+// ══════════════════════════════════════
 
-// Get ALL matches from the cloud (for the lobby)
 export async function fetchMatches() {
   const matchesCol = collection(db, 'matches');
   const matchesSnap = await getDocs(matchesCol);
   return matchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-// Save a brand new match to the cloud
 export async function createMatchInDb(matchId, data) {
   const matchRef = doc(db, 'matches', matchId);
   await setDoc(matchRef, data);
 }
 
-// Update a match (join count, room id, result, etc)
 export async function updateMatchInDb(matchId, data) {
   const matchRef = doc(db, 'matches', matchId);
   await updateDoc(matchRef, data);
+}
+
+// ══════════════════════════════════════
+//  TRANSACTION LOG (Optional, for admin tracking)
+// ══════════════════════════════════════
+
+export async function addTransaction(txData) {
+  const txRef = doc(db, 'transactions', txData.id);
+  await setDoc(txRef, txData);
+}
+
+export async function fetchTransactions(uid) {
+  const txCol = collection(db, 'transactions');
+  const q = txCol.where('userId', '==', uid);
+  const txSnap = await getDocs(q);
+  return txSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }

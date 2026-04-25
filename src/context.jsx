@@ -1,4 +1,4 @@
-import { fetchUser, createUser, fetchMatches, createMatchInDb } from './db'
+import { fetchUser, createUser, fetchMatches, updateMatchInDb } from './db'
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
 import { calculateMatchEconomics, calculateJoinCost } from './utils'
 import { auth } from './firebase'
@@ -106,9 +106,9 @@ const initialState = {
   isLoggedIn: saved?.isLoggedIn || false,
   currentUser: saved?.currentUser || null,
   users: saved?.users || INITIAL_USERS,
-  matches: saved?.matches || INITIAL_MATCHES,
+    matches: [],
   notifications: saved?.notifications || INITIAL_NOTIFICATIONS,
-  transactions: saved?.transactions || INITIAL_TRANSACTIONS,
+  transactions: [],
   standings: saved?.standings || INITIAL_STANDINGS,
   adminPayments: saved?.adminPayments || INITIAL_ADMIN_PAYMENTS,
   pendingWithdrawals: saved?.pendingWithdrawals || INITIAL_PENDING_WITHDRAWALS,
@@ -359,11 +359,28 @@ function reducer(state, action) {
         teamName: teamName || state.currentUser.teamName || '',
       }
 
+      const updatedMatch = {
+        ...match,
+        joinedCount: match.joinedCount + 1,
+        participants: [...(match.participants || []), state.currentUser.id]
+      }
+      // 🚀 CLOUD SYNC: Update match in Firestore
+      updateMatchInDb(matchId, updatedMatch).catch(err => console.error("Cloud match sync failed:", err))
+
       return {
         ...state,
-        matches: state.matches.map(m => m.id === matchId
-          ? { ...m, joinedCount: m.joinedCount + 1, participants: [...(m.participants || []), state.currentUser.id] }
-          : m),
+        matches: state.matches.map(m => m.id === matchId ? updatedMatch : m),
+        currentUser: updatedUser,
+        users: state.users.map(u => u.id === updatedUser.id ? updatedUser : u),
+        transactions: [{
+          id: 'tx' + Date.now(), type: 'join', amount: cost,
+          desc: teamName
+            ? `Joined ${match.title} (Team: ${teamName})`
+            : `Joined ${match.title}`,
+          date: getTimeStr(0), status: 'completed'
+        }, ...state.transactions],
+      }
+    }
         currentUser: updatedUser,
         users: state.users.map(u => u.id === updatedUser.id ? updatedUser : u),
         transactions: [{
@@ -407,12 +424,17 @@ function reducer(state, action) {
     // ════════════════════════════════════════
     //  WALLET
     // ════════════════════════════════════════
-    case 'ADD_MONEY': {
+      case 'ADD_MONEY': {
+      const amt = action.payload.amount
+      // 🚀 CLOUD SYNC: Save balance to Firestore
+      if (state.currentUser?.firebaseUid) {
+        updateUser(state.currentUser.firebaseUid, { balance: state.currentUser.balance + amt }).catch(err => console.error("Cloud wallet sync failed:", err))
+      }
       return {
         ...state,
-        currentUser: { ...state.currentUser, balance: state.currentUser.balance + action.payload.amount },
+        currentUser: { ...state.currentUser, balance: state.currentUser.balance + amt },
         transactions: [{
-          id: 'tx' + Date.now(), type: 'add', amount: action.payload.amount,
+          id: 'tx' + Date.now(), type: 'add', amount: amt,
           desc: `Added via ${action.payload.method}`, date: getTimeStr(0), status: 'completed'
         }, ...state.transactions],
       }
