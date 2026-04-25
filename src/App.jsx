@@ -33,22 +33,7 @@ function LoadingSkeleton() {
 }
 
 function AuthGuard({ children }) {
-  const { state, dispatch } = useApp()
-
-  // 🔥 UNBREAKABLE FALLBACK: If Firebase null wipes the session, immediately restore it from localStorage
-  useEffect(() => {
-    if (!state.isLoggedIn) {
-      try {
-        const raw = localStorage.getItem('clutch_arena_bd')
-        if (raw) {
-          const data = JSON.parse(raw)
-          if (data.isLoggedIn && data.currentUser) {
-            dispatch({ type: 'LOGIN', payload: data.currentUser })
-          }
-        }
-      } catch (e) {}
-    }
-  }, [state.isLoggedIn, dispatch])
+  const { state } = useApp()
 
   if (!state.isLoggedIn) {
     const mode = state.currentView === 'admin-login' ? 'admin' : 'user'
