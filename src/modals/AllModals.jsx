@@ -90,9 +90,9 @@ export function JoinMatchModal({ matchId, data }) {
   const { currentUser, matches } = state
   const match = matches.find(m => m.id === matchId)
   const [names, setNames] = useState([''])
+  const [teamName, setTeamName] = useState('')
 
   const team = match ? isTeamMode(match.mode) : false
-  const teamName = data?.teamName || ''
 
   if (!match || !currentUser) return null
 
@@ -157,23 +157,25 @@ export function JoinMatchModal({ matchId, data }) {
         </div>
       </div>
 
-      {/* Team name display for Squad/Duo */}
-      {team && teamName && (
-        <div style={{
-          ...M.card, padding: '12px 14px', marginBottom: 14,
-          borderLeft: '4px solid #FFC857',
-          background: 'linear-gradient(135deg, rgba(255,200,87,0.08) 0%, rgba(255,200,87,0.01) 70%), #1c1b1d',
-          display: 'flex', alignItems: 'center', gap: 10,
-        }}>
-          <i className="fa-solid fa-shield-halved" style={{ color: '#FFC857', fontSize: 16, flexShrink: 0 }} />
-          <div>
-            <div style={{ fontSize: 10, color: '#555555', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 2 }}>
-              {match.mode} Team Name
-            </div>
-            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 700, color: '#FFC857', letterSpacing: '0.03em' }}>
-              {teamName}
-            </div>
+      {/* Team name input for Squad/Duo */}
+      {team && (
+        <div style={M.fullRow}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ width: 4, height: 16, background: '#FFC857', borderRadius: 2 }} />
+            <label style={{ ...M.label, marginBottom: 0 }}>Team Name *</label>
           </div>
+          <input
+            style={{
+              ...M.input,
+              border: '1px solid rgba(255,200,87,0.3)',
+              background: 'linear-gradient(135deg, rgba(255,200,87,0.05) 0%, rgba(255,200,87,0.01) 70%), #1c1b1d',
+              color: '#FFC857',
+              fontFamily: "'Inter', sans-serif", fontSize: 15, fontWeight: 700,
+            }}
+            placeholder="Enter your team name"
+            value={teamName}
+            onChange={e => setTeamName(e.target.value)}
+          />
         </div>
       )}
 
