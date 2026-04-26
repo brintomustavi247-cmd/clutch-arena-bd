@@ -311,7 +311,8 @@ export function AddMoneyModal() {
 
   const brand = brandOf(method)
   const selectedMethod = ADD_MONEY_METHODS.find(m => m.id === method)
-  const adminNumber = adminPayments?.[method] || ''
+  const PAY_KEY = { bkash: 'bKash', nagad: 'Nagad', rocket: 'Rocket' }
+const adminNumber = adminPayments?.[PAY_KEY[method]] || ''
 
   const isNumberSet = adminNumber && adminNumber !== '' && adminNumber !== 'Not set by admin'
 
