@@ -386,3 +386,12 @@ export function subscribeToSettings(onUpdate) {
   });
   return unsubscribe;
 }
+export function subscribeToUser(uid, onUpdate) {
+  const userRef = doc(db, 'users', uid);
+  const unsubscribe = onSnapshot(userRef, (snap) => {
+    if (snap.exists()) {
+      onUpdate(snap.data());
+    }
+  });
+  return unsubscribe;
+}

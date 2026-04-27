@@ -1,4 +1,4 @@
-import { fetchUser, createUser, createMatchInDb, updateMatchInDb, getSettings, saveSettings, createAddMoneyRequest, fetchPendingAddMoneyRequests, approveAddMoneyRequest, rejectAddMoneyRequest, distributePrizes, cancelMatchAndRefund, checkDuplicateTXID, adminAdjustBalance, addJoinToMatch, addWithdrawalToCloud, logActivityToCloud, addTransactionToCloud, subscribeToMatches, subscribeToSettings } from './db'
+import { fetchUser, createUser, createMatchInDb, updateMatchInDb, getSettings, saveSettings, createAddMoneyRequest, fetchPendingAddMoneyRequests, approveAddMoneyRequest, rejectAddMoneyRequest, distributePrizes, cancelMatchAndRefund, checkDuplicateTXID, adminAdjustBalance, addJoinToMatch, addWithdrawalToCloud, logActivityToCloud, addTransactionToCloud, subscribeToMatches, subscribeToSettings, subscribeToUser } from './db'
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
 import { calculateMatchEconomics, calculateJoinCost } from './utils'
 import { auth } from './firebase'
@@ -243,6 +243,15 @@ function reducer(state, action) {
         modal: null,
       }
     }
+        case 'FIREBASE_USER_UPDATE': {
+      if (!state.currentUser) return state
+      return {
+        ...state,
+        currentUser: { ...state.currentUser, ...action.payload },
+      }
+    }
+
+    case 'FIREBASE_LOGOUT':
 
     case 'FIREBASE_LOGOUT':
       if (state.currentUser?.firebaseUid) {
@@ -562,6 +571,7 @@ function reducer(state, action) {
         username: state.currentUser.name || state.currentUser.displayName,
         ign: state.currentUser.ign || '',
         phone: state.currentUser.phone || '',
+        senderNumber: action.payload.senderNumber || '',
         amount: Number(amount),
         method: method,
         txId: txId,
@@ -889,6 +899,15 @@ export function AppProvider({ children }) {
     })
     return () => unsubscribe()
   }, [])
+    // 🚀 PHASE 3.4: Real-time user listener — instant balance update after admin approval
+  useEffect(() => {
+    const uid = state.currentUser?.firebaseUid
+    if (!uid) return
+    const unsubscribe = subscribeToUser(uid, (data) => {
+      dispatch({ type: 'FIREBASE_USER_UPDATE', payload: data })
+    })
+    return () => unsubscribe()
+  }, [state.currentUser?.firebaseUid])
 
   // 🚀 Load pending add money requests (admin/owner only)
   useEffect(() => {
