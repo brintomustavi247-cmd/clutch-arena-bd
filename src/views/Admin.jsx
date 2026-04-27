@@ -1331,68 +1331,197 @@ function AdminUsers() {
 // ═══════════════════════════════════════
 function AdminFinance() {
   const { state, dispatch } = useApp()
-  const { transactions, pendingWithdrawals } = state
+  const { transactions, pendingWithdrawals, pendingAddMoneyRequests } = state
   const mobile = useIsMobile()
+  const [financeTab, setFinanceTab] = useState('deposits')
+  const [processing, setProcessing] = useState(null)
 
-  const handleApprove = (w) => {
+  const requests = pendingAddMoneyRequests || []
+
+  // ═══ Deposit handlers ═══
+  const handleApproveDeposit = async (req) => {
+    setProcessing(req.id)
+    try {
+      await approveAddMoneyRequest(req.id, req.userId, req.amount)
+      dispatch({ type: 'APPROVE_ADD_MONEY', payload: { requestId: req.id, userId: req.userId, amount: req.amount } })
+      adminAction(dispatch, 'Approved add money', `${req.username} — ${formatTK(req.amount)} via ${req.method}`, `${formatTK(req.amount)} added to ${req.username}`, 'success')
+    } catch (err) {
+      console.error('Approve failed:', err)
+      showToast(dispatch, 'Failed to approve. Check console.', 'error')
+    }
+    setProcessing(null)
+  }
+
+  const handleRejectDeposit = async (req) => {
+    setProcessing(req.id)
+    try {
+      await rejectAddMoneyRequest(req.id)
+      dispatch({ type: 'REJECT_ADD_MONEY', payload: { requestId: req.id } })
+      adminAction(dispatch, 'Rejected add money', `${req.username} — ${formatTK(req.amount)} via ${req.method}`, `Rejected ${req.username}'s request`, 'error')
+    } catch (err) {
+      console.error('Reject failed:', err)
+      showToast(dispatch, 'Failed to reject. Check console.', 'error')
+    }
+    setProcessing(null)
+  }
+
+  // ═══ Withdrawal handlers ═══
+  const handleApproveWithdraw = (w) => {
     dispatch({ type: 'APPROVE_WITHDRAW', payload: w.id })
     adminAction(dispatch, 'Approved withdrawal', `${w.username} — ${formatTK(w.amount)} via ${w.method}`, `Approved ${w.username}'s withdrawal`, 'success')
   }
-  const handleReject = (w) => {
+  const handleRejectWithdraw = (w) => {
     dispatch({ type: 'REJECT_WITHDRAW', payload: w.id })
     adminAction(dispatch, 'Rejected withdrawal', `${w.username} — ${formatTK(w.amount)}`, `Rejected ${w.username}'s withdrawal`, 'error')
   }
 
-  const pendingSection = mobile ? (
+  const timeAgo = (isoStr) => {
+    if (!isoStr) return '—'
+    const diff = Date.now() - new Date(isoStr).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'Just now'
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    return `${Math.floor(hrs / 24)}d ago`
+  }
+
+  // ═══ PHASE 3.5 + 3.6: Sub-tabs ═══
+  const subTabs = [
+    { id: 'deposits', label: 'Deposit Requests', icon: 'fa-wallet', count: requests.length, color: '#22c55e' },
+    { id: 'withdrawals', label: 'Withdrawal Requests', icon: 'fa-arrow-up-from-bracket', count: pendingWithdrawals.length, color: '#fbbf24' },
+    { id: 'transactions', label: 'All Transactions', icon: 'fa-receipt', count: transactions.length, color: '#6c8cff' },
+  ]
+
+  // ═══ DEPOSITS TAB CONTENT ═══
+  const depositsContent = requests.length === 0 ? (
+    <div style={{ ...S.card, padding: 40, textAlign: 'center' }}>
+      <i className="fa-solid fa-circle-check" style={{ fontSize: 36, color: '#22c55e', marginBottom: 12, display: 'block', opacity: 0.4 }}></i>
+      <div style={{ fontFamily: 'var(--font-heading)', fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 }}>All Caught Up</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted, #666)' }}>No pending deposit requests</div>
+    </div>
+  ) : mobile ? (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {pendingWithdrawals.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-muted, #555)', fontSize: 13 }}>No pending withdrawals</div>
-      ) : (
-        pendingWithdrawals.map(w => (
-          <div key={w.id} style={S.mCard}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: '#fff', fontSize: 13 }}>{w.username}</span>
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: '#fbbf24', fontSize: 15 }}>{formatTK(w.amount)}</span>
+      {requests.map(req => {
+        const isProc = processing === req.id
+        return (
+          <div key={req.id} style={{ ...S.mCard, borderLeft: '3px solid #22c55e', opacity: isProc ? 0.5 : 1, pointerEvents: isProc ? 'none' : 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-heading)', fontSize: 13, fontWeight: 700, color: '#22c55e' }}>
+                  {(req.username || '?').charAt(0)}
+                </div>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: '#fff', fontSize: 13 }}>{req.username}</div>
+                  {req.ign && <div style={{ fontSize: 10, color: 'var(--text-muted, #666)' }}>IGN: {req.ign}</div>}
+                </div>
+              </div>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: '#22c55e', fontSize: 18 }}>{formatTK(req.amount)}</span>
             </div>
-            <div style={S.mRow}><span style={S.mLabel}>Method</span><span style={{ fontSize: 12, color: 'var(--text-muted, #888)' }}>{w.method}</span></div>
-            <div style={S.mRow}><span style={S.mLabel}>Account</span><span style={{ fontSize: 12, color: 'var(--text-muted, #777)', wordBreak: 'break-all' }}>{w.account || '—'}</span></div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end' }}>
-              <button style={S.btnSuccess} onClick={() => handleApprove(w)}><i className="fa-solid fa-check"></i> Approve</button>
-              <button style={S.btnDanger} onClick={() => handleReject(w)}><i className="fa-solid fa-xmark"></i> Reject</button>
+            <div style={S.mRow}><span style={S.mLabel}>Method</span><span style={{ fontSize: 12, color: '#fff', fontWeight: 600 }}>{req.method}</span></div>
+            {/* ═══ PHASE 3.3: TXID + Sender Number ═══ */}
+            <div style={S.mRow}><span style={S.mLabel}>TXID</span><span style={{ fontSize: 12, color: '#fbbf24', fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: 0.5 }}>{req.txId || '—'}</span></div>
+            {req.senderNumber && <div style={S.mRow}><span style={S.mLabel}>Sender #</span><span style={{ fontSize: 12, color: '#22c55e', fontFamily: 'var(--font-display)', fontWeight: 700 }}>{req.senderNumber}</span></div>}
+            {req.phone && <div style={S.mRow}><span style={S.mLabel}>Registered</span><span style={{ fontSize: 12, color: 'var(--text-muted, #888)' }}>{req.phone}</span></div>}
+            {/* ═══ END PHASE 3.3 ═══ */}
+            <div style={S.mRow}><span style={S.mLabel}>Time</span><span style={{ fontSize: 11, color: 'var(--text-muted, #666)' }}>{timeAgo(req.createdAt)}</span></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+              <button style={{ ...S.btnDanger, padding: '8px 16px', fontSize: 12, opacity: isProc ? 0.5 : 1 }} onClick={() => handleRejectDeposit(req)} disabled={isProc}><i className="fa-solid fa-xmark"></i> Reject</button>
+              <button style={{ ...S.btnSuccess, padding: '8px 16px', fontSize: 12, opacity: isProc ? 0.5 : 1 }} onClick={() => handleApproveDeposit(req)} disabled={isProc}><i className="fa-solid fa-check"></i> Approve</button>
             </div>
           </div>
-        ))
-      )}
+        )
+      })}
+    </div>
+  ) : (
+    <div style={{ ...S.card }}>
+      <table style={S.table}>
+        <thead><tr>
+          <th style={S.th}>User</th><th style={S.th}>Amount</th><th style={S.th}>Method</th>
+          <th style={S.th}>TXID</th><th style={S.th}>Sender #</th><th style={S.th}>Phone</th><th style={S.th}>Time</th>
+          <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>
+        </tr></thead>
+        <tbody>
+          {requests.map(req => {
+            const isProc = processing === req.id
+            return (
+              <tr key={req.id} style={{ opacity: isProc ? 0.5 : 1 }}>
+                <td style={S.td}>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: '#fff', fontSize: 12 }}>{req.username}</div>
+                  {req.ign && <div style={{ fontSize: 10, color: 'var(--text-muted, #666)' }}>IGN: {req.ign}</div>}
+                </td>
+                <td style={{ ...S.td, fontFamily: 'var(--font-display)', fontWeight: 700, color: '#22c55e', fontSize: 14 }}>{formatTK(req.amount)}</td>
+                <td style={S.td}><span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, fontFamily: 'var(--font-heading)', background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>{req.method}</span></td>
+                {/* ═══ PHASE 3.3: TXID + Sender Number ═══ */}
+                <td style={{ ...S.td, fontFamily: 'var(--font-display)', fontWeight: 700, color: '#fbbf24', fontSize: 12, letterSpacing: 0.5 }}>{req.txId || '—'}</td>
+                <td style={{ ...S.td, fontSize: 12, color: '#22c55e', fontFamily: 'var(--font-display)', fontWeight: 700 }}>{req.senderNumber || '—'}</td>
+                <td style={{ ...S.td, fontSize: 12, color: 'var(--text-muted, #888)' }}>{req.phone || '—'}</td>
+                {/* ═══ END PHASE 3.3 ═══ */}
+                <td style={{ ...S.td, fontSize: 11, color: 'var(--text-muted, #666)' }}>{timeAgo(req.createdAt)}</td>
+                <td style={{ ...S.td, textAlign: 'right' }}>
+                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <button style={{ ...S.btnDanger, opacity: isProc ? 0.5 : 1 }} onClick={() => handleRejectDeposit(req)} disabled={isProc}><i className="fa-solid fa-xmark"></i> Reject</button>
+                    <button style={{ ...S.btnSuccess, opacity: isProc ? 0.5 : 1 }} onClick={() => handleApproveDeposit(req)} disabled={isProc}><i className="fa-solid fa-check"></i> Approve</button>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+
+  // ═══ WITHDRAWALS TAB CONTENT ═══
+  const withdrawalsContent = pendingWithdrawals.length === 0 ? (
+    <div style={{ ...S.card, padding: 40, textAlign: 'center' }}>
+      <i className="fa-solid fa-circle-check" style={{ fontSize: 36, color: '#fbbf24', marginBottom: 12, display: 'block', opacity: 0.4 }}></i>
+      <div style={{ fontFamily: 'var(--font-heading)', fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 }}>All Caught Up</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted, #666)' }}>No pending withdrawal requests</div>
+    </div>
+  ) : mobile ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {pendingWithdrawals.map(w => (
+        <div key={w.id} style={{ ...S.mCard, borderLeft: '3px solid #fbbf24' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: '#fff', fontSize: 13 }}>{w.username}</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: '#fbbf24', fontSize: 15 }}>{formatTK(w.amount)}</span>
+          </div>
+          <div style={S.mRow}><span style={S.mLabel}>Method</span><span style={{ fontSize: 12, color: 'var(--text-muted, #888)' }}>{w.method}</span></div>
+          <div style={S.mRow}><span style={S.mLabel}>Account</span><span style={{ fontSize: 12, color: 'var(--text-muted, #777)', wordBreak: 'break-all' }}>{w.account || '—'}</span></div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end' }}>
+            <button style={S.btnSuccess} onClick={() => handleApproveWithdraw(w)}><i className="fa-solid fa-check"></i> Approve</button>
+            <button style={S.btnDanger} onClick={() => handleRejectWithdraw(w)}><i className="fa-solid fa-xmark"></i> Reject</button>
+          </div>
+        </div>
+      ))}
     </div>
   ) : (
     <div style={{ ...S.card }}>
       <table style={S.table}>
         <thead><tr><th style={S.th}>User</th><th style={S.th}>Amount</th><th style={S.th}>Method</th><th style={S.th}>Account</th><th style={{ ...S.th, textAlign: 'right' }}>Actions</th></tr></thead>
         <tbody>
-          {pendingWithdrawals.length === 0 ? (
-            <tr><td colSpan={5} style={{ ...S.td, textAlign: 'center', padding: 30, color: 'var(--text-muted, #555)' }}>No pending withdrawals</td></tr>
-          ) : (
-            pendingWithdrawals.map(w => (
-              <tr key={w.id}>
-                <td style={{ ...S.td, fontFamily: 'var(--font-heading)', fontWeight: 600, color: '#fff' }}>{w.username}</td>
-                <td style={{ ...S.td, fontFamily: 'var(--font-display)', fontWeight: 700, color: '#fbbf24' }}>{formatTK(w.amount)}</td>
-                <td style={{ ...S.td, color: 'var(--text-muted, #888)' }}>{w.method}</td>
-                <td style={{ ...S.td, fontSize: 11, color: 'var(--text-muted, #777)' }}>{w.account || '—'}</td>
-                <td style={{ ...S.td, textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                    <button style={S.btnSuccess} onClick={() => handleApprove(w)}><i className="fa-solid fa-check"></i> Approve</button>
-                    <button style={S.btnDanger} onClick={() => handleReject(w)}><i className="fa-solid fa-xmark"></i> Reject</button>
-                  </div>
-                </td>
-              </tr>
-            ))
-          )}
+          {pendingWithdrawals.map(w => (
+            <tr key={w.id}>
+              <td style={{ ...S.td, fontFamily: 'var(--font-heading)', fontWeight: 600, color: '#fff' }}>{w.username}</td>
+              <td style={{ ...S.td, fontFamily: 'var(--font-display)', fontWeight: 700, color: '#fbbf24' }}>{formatTK(w.amount)}</td>
+              <td style={{ ...S.td, color: 'var(--text-muted, #888)' }}>{w.method}</td>
+              <td style={{ ...S.td, fontSize: 11, color: 'var(--text-muted, #777)' }}>{w.account || '—'}</td>
+              <td style={{ ...S.td, textAlign: 'right' }}>
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                  <button style={S.btnSuccess} onClick={() => handleApproveWithdraw(w)}><i className="fa-solid fa-check"></i> Approve</button>
+                  <button style={S.btnDanger} onClick={() => handleRejectWithdraw(w)}><i className="fa-solid fa-xmark"></i> Reject</button>
+                </div>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
   )
 
-  const txSection = mobile ? (
+  // ═══ TRANSACTIONS TAB CONTENT ═══
+  const txContent = mobile ? (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {transactions.slice(0, 30).map(tx => {
         const isPos = tx.type === 'add' || tx.type === 'win'
@@ -1435,24 +1564,53 @@ function AdminFinance() {
   return (
     <div style={S.panel}>
       <h1 style={S.title}><i className="fa-solid fa-money-bill-transfer" style={{ marginRight: 10, color: '#a78bfa' }}></i>Finance Management</h1>
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-          <i className="fa-solid fa-hourglass-half" style={{ color: '#fbbf24', fontSize: 14 }}></i>
-          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 16, fontWeight: 700, color: '#fff', margin: 0 }}>
-            Pending Withdrawals <span style={{ marginLeft: 8, fontSize: 11, color: '#fbbf24', fontFamily: 'var(--font-display)', fontWeight: 700 }}>({pendingWithdrawals.length})</span>
-          </h2>
-        </div>
-        {pendingSection}
+
+      {/* ═══ PHASE 3.5 + 3.6: Sub-tab bar ═══ */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, overflowX: 'auto', paddingBottom: 2 }}>
+        {subTabs.map(st => {
+          const active = financeTab === st.id
+          return (
+            <button key={st.id} onClick={() => setFinanceTab(st.id)} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 16px',
+              borderRadius: 10, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+              fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-heading)',
+              background: active ? (st.color + '20') : 'rgba(255,255,255,0.03)',
+              color: active ? st.color : '#666',
+              border: '1px solid ' + (active ? (st.color + '40') : 'rgba(255,255,255,0.05)'),
+              boxShadow: active ? ('0 4px 16px ' + st.color + '12') : 'none',
+              transition: 'all 0.3s ease',
+            }}>
+              <i className={'fa-solid ' + st.icon} style={{ fontSize: 12 }}></i>
+              {st.label}
+              <span style={{
+                padding: '1px 7px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                fontFamily: 'var(--font-display)',
+                background: active ? (st.color + '30') : 'rgba(255,255,255,0.06)',
+                color: active ? st.color : '#555',
+              }}>{st.count}</span>
+            </button>
+          )
+        })}
       </div>
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-          <i className="fa-solid fa-receipt" style={{ color: '#6c8cff', fontSize: 14 }}></i>
-          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 16, fontWeight: 700, color: '#fff', margin: 0 }}>
-            All Transactions <span style={{ marginLeft: 8, fontSize: 11, color: '#6c8cff', fontFamily: 'var(--font-display)', fontWeight: 700 }}>({transactions.length})</span>
-          </h2>
+
+      {/* Verify warning for deposits */}
+      {financeTab === 'deposits' && requests.length > 0 && (
+        <div style={{
+          padding: '12px 18px', borderRadius: 12, marginBottom: 20,
+          background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.12)',
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+        }}>
+          <i className="fa-solid fa-triangle-exclamation" style={{ color: '#fbbf24', fontSize: 14, marginTop: 2, flexShrink: 0 }}></i>
+          <div style={{ fontSize: 12, color: 'var(--text-muted, #888)', lineHeight: 1.5 }}>
+            <strong style={{ color: '#fbbf24' }}>Verify before approving:</strong> Check your payment app to confirm the user sent money. Match the <strong style={{ color: '#fbbf24' }}>TXID</strong> and <strong style={{ color: '#22c55e' }}>Sender Number</strong>.
+          </div>
         </div>
-        {txSection}
-      </div>
+      )}
+
+      {/* Tab content */}
+      {financeTab === 'deposits' && depositsContent}
+      {financeTab === 'withdrawals' && withdrawalsContent}
+      {financeTab === 'transactions' && txContent}
     </div>
   )
 }
@@ -1573,7 +1731,8 @@ function AdminAddMoneyRequests() {
                 </div>
                 <div style={S.mRow}><span style={S.mLabel}>Method</span><span style={{ fontSize: 12, color: '#fff', fontWeight: 600 }}>{req.method}</span></div>
                 <div style={S.mRow}><span style={S.mLabel}>TXID</span><span style={{ fontSize: 12, color: '#fbbf24', fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: 0.5 }}>{req.txId || '—'}</span></div>
-                {req.phone && <div style={S.mRow}><span style={S.mLabel}>Phone</span><span style={{ fontSize: 12, color: 'var(--text-muted, #888)' }}>{req.phone}</span></div>}
+                {req.senderNumber && <div style={S.mRow}><span style={S.mLabel}>Sender #</span><span style={{ fontSize: 12, color: '#22c55e', fontFamily: 'var(--font-display)', fontWeight: 700 }}>{req.senderNumber}</span></div>}
+                {req.phone && <div style={S.mRow}><span style={S.mLabel}>Registered</span><span style={{ fontSize: 12, color: 'var(--text-muted, #888)' }}>{req.phone}</span></div>}
                 <div style={S.mRow}><span style={S.mLabel}>Time</span><span style={{ fontSize: 11, color: 'var(--text-muted, #666)' }}>{timeAgo(req.createdAt)}</span></div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
                   <button
@@ -1604,6 +1763,7 @@ function AdminAddMoneyRequests() {
                 <th style={S.th}>Amount</th>
                 <th style={S.th}>Method</th>
                 <th style={S.th}>TXID</th>
+                <th style={S.th}>Sender #</th>
                 <th style={S.th}>Phone</th>
                 <th style={S.th}>Time</th>
                 <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>
@@ -1621,6 +1781,7 @@ function AdminAddMoneyRequests() {
                     <td style={{ ...S.td, fontFamily: 'var(--font-display)', fontWeight: 700, color: '#22c55e', fontSize: 14 }}>{formatTK(req.amount)}</td>
                     <td style={S.td}><span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, fontFamily: 'var(--font-heading)', background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>{req.method}</span></td>
                     <td style={{ ...S.td, fontFamily: 'var(--font-display)', fontWeight: 700, color: '#fbbf24', fontSize: 12, letterSpacing: 0.5 }}>{req.txId || '—'}</td>
+                    <td style={{ ...S.td, fontSize: 12, color: '#22c55e', fontFamily: 'var(--font-display)', fontWeight: 700 }}>{req.senderNumber || '—'}</td>
                     <td style={{ ...S.td, fontSize: 12, color: 'var(--text-muted, #888)' }}>{req.phone || '—'}</td>
                     <td style={{ ...S.td, fontSize: 11, color: 'var(--text-muted, #666)' }}>{timeAgo(req.createdAt)}</td>
                     <td style={{ ...S.td, textAlign: 'right' }}>
@@ -1945,7 +2106,7 @@ const ADMIN_TABS = [
   { id: 'admin-rooms', label: 'Rooms', icon: 'fa-key', color: '#fbbf24' },
   { id: 'admin-results', label: 'Results', icon: 'fa-clipboard-check', color: '#22c55e' },
   { id: 'admin-users', label: 'Users', icon: 'fa-users-gear', color: '#6c8cff' },
-  { id: 'admin-finance', label: 'Finance', icon: 'fa-money-bill-transfer', color: '#ef4444' },
+  { id: 'admin-finance', label: 'Finance', icon: 'fa-money-bill-transfer', color: '#ef4444', badge: (state.pendingAddMoneyRequests || []).length + (state.pendingWithdrawals || []).length },
   { id: 'admin-add-money', label: 'Add Money', icon: 'fa-wallet', color: '#22c55e' },
   { id: 'admin-payments', label: 'Payments', icon: 'fa-credit-card', color: '#f59e0b' },
   { id: 'admin-owners', label: 'Owner Panel', icon: 'fa-crown', color: '#fbbf24' },
@@ -2029,6 +2190,13 @@ export default function Admin() {
                 )}
                 <i className={'fa-solid ' + t.icon} style={{ fontSize: 12 }}></i>
                 {t.label}
+                {t.badge > 0 && (
+                  <span style={{
+                    padding: '1px 7px', borderRadius: 8, fontSize: 9, fontWeight: 700,
+                    fontFamily: 'var(--font-display)', background: t.color + '25', color: t.color,
+                    marginLeft: 2,
+                  }}>{t.badge}</span>
+                )}
               </button>
             )
           })}
