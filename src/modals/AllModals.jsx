@@ -157,7 +157,6 @@ export function JoinMatchModal({ matchId, data }) {
         </div>
       </div>
 
-      {/* Team name input for Squad/Duo */}
       {team && (
         <div style={M.fullRow}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -342,12 +341,10 @@ export function AddMoneyModal() {
   const isTxIdDuplicate = (id) => {
     if (!id || id.trim().length < 6) return false
     const normalized = id.trim().toUpperCase()
-    // Check pending add money requests
     const inPending = (pendingAddMoneyRequests || []).some(
       r => r.txId && r.txId.toUpperCase() === normalized && r.status === 'pending'
     )
     if (inPending) return true
-    // Check approved transactions with txId
     const inTx = (transactions || []).some(
       t => t.txId && t.txId.toUpperCase() === normalized
     )
@@ -357,13 +354,16 @@ export function AddMoneyModal() {
 
   // ═══ PHASE 1.8: Deposit rate limiting (1 per 2 min) ═══
   const getRateLimitInfo = () => {
+    if (state.rateLimited) {
+      // Fallback to global state flag if context sets it
+      return { blocked: true, waitSeconds: 120 }
+    }
     const now = Date.now()
     const RATE_LIMIT_MS = 2 * 60 * 1000 // 2 minutes
     const myRequests = (pendingAddMoneyRequests || []).filter(
       r => r.userId === currentUser?.id && r.status === 'pending'
     )
     if (myRequests.length === 0) return { blocked: false, waitSeconds: 0 }
-    // Find the most recent request
     const sorted = [...myRequests].sort((a, b) => {
       const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0
       const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0
@@ -398,7 +398,6 @@ export function AddMoneyModal() {
     }
     // ═══ END PHASE 1.7 ═══
 
-    // ✅ FIXED: Now sends txId in payload, no instant balance change
     dispatch({
       type: 'ADD_MONEY',
       payload: {
@@ -408,7 +407,6 @@ export function AddMoneyModal() {
       }
     })
     dispatch({ type: 'CLOSE_MODAL' })
-    // ✅ FIXED: Correct message — pending approval, NOT "added"
     showToast(dispatch, `${formatTK(amt)} request submitted! Wait for admin approval.`, 'success')
   }
 
@@ -517,7 +515,6 @@ export function AddMoneyModal() {
         </div>
       </section>
 
-      {/* ✅ NEW: Warning when number is not set */}
       {!isNumberSet && (
         <section style={{
           background: 'linear-gradient(135deg, rgba(248,113,113,0.08) 0%, rgba(248,113,113,0.02) 60%), #1b1b1d',
@@ -636,10 +633,8 @@ export function AddMoneyModal() {
             style={{
               width: '100%', height: 56,
               borderRadius: 12,
-              // ═══ PHASE 1.7: Red border when duplicate TXID detected ═══
               border: isTxIdDuplicate(txId) ? '1px solid #f87171' : '1px solid #353437',
               background: isTxIdDuplicate(txId) ? 'rgba(248,113,113,0.04)' : 'transparent',
-              // ═══ END PHASE 1.7 ═══
               padding: '0 16px',
               fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, fontWeight: 700,
               color: '#e5e1e4',
@@ -653,7 +648,6 @@ export function AddMoneyModal() {
             onChange={e => setTxId(e.target.value)}
           />
         </div>
-        {/* ═══ PHASE 1.7: Duplicate TXID inline warning ═══ */}
         {isTxIdDuplicate(txId) && (
           <p style={{
             fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -664,7 +658,6 @@ export function AddMoneyModal() {
             This TXID is already used! You cannot reuse a transaction ID.
           </p>
         )}
-        {/* ═══ END PHASE 1.7 ═══ */}
         <p style={{
           fontFamily: "'Plus Jakarta Sans', sans-serif",
           fontSize: 10, color: '#555555', margin: '6px 0 0 0',
@@ -715,10 +708,8 @@ export function AddMoneyModal() {
           style={{
             flex: 1, height: 56, borderRadius: 12,
             border: 'none',
-            // ═══ PHASE 1.7 + 1.8: Disable submit when duplicate TXID or rate limited ═══
             background: (isNumberSet && !isTxIdDuplicate(txId) && !rateLimit.blocked) ? brand.primary : '#2a2a2c',
             color: (isNumberSet && !isTxIdDuplicate(txId) && !rateLimit.blocked) ? '#ffffff' : '#555555',
-            // ═══ END PHASE 1.7 + 1.8 ═══
             fontFamily: "'Lexend', sans-serif", fontSize: 14, fontWeight: 700,
             letterSpacing: '0.08em', textTransform: 'uppercase',
             cursor: (isNumberSet && !isTxIdDuplicate(txId) && !rateLimit.blocked) ? 'pointer' : 'not-allowed',
@@ -727,9 +718,7 @@ export function AddMoneyModal() {
             minWidth: 0,
           }}
           onClick={handleSubmit}
-          // ═══ PHASE 1.7 + 1.8: Disable button ═══
           disabled={!isNumberSet || isTxIdDuplicate(txId) || rateLimit.blocked}
-          // ═══ END PHASE 1.7 + 1.8 ═══
         >
           <i className="fa-solid fa-paper-plane" style={{ fontSize: 16 }} />
           Submit Request
@@ -741,7 +730,7 @@ export function AddMoneyModal() {
 
 /* ═══════════════════════════════════════
    3. WITHDRAW MODAL
-   ═════════════════════════════════════ */
+   ═══════════════════════════════════════ */
 export function WithdrawModal() {
   const { state, dispatch } = useApp()
   const { currentUser } = state
@@ -871,7 +860,7 @@ export function WithdrawModal() {
 
 /* ═══════════════════════════════════════
    4. CREATE MATCH MODAL
-   ═════════════════════════════════════ */
+   ═══════════════════════════════════════ */
 export function CreateMatchModal({ isEdit, matchId }) {
   const { state, dispatch } = useApp()
   const editMatch = isEdit ? state.matches.find(m => m.id === matchId) : null
@@ -1247,7 +1236,7 @@ export function AdjustBalanceModal({ userId }) {
     // ═══ PHASE 1.10: Reason is required — every balance change must be logged ═══
     if (!reason.trim()) return showToast(dispatch, 'Reason is required for all balance adjustments', 'error')
     // ═══ END PHASE 1.10 ═══
-    // ═══ PHASE 1.10: Include reason in payload so context creates a transaction record ═══
+    
     dispatch({
       type: 'ADJUST_BALANCE',
       payload: {
@@ -1257,7 +1246,6 @@ export function AdjustBalanceModal({ userId }) {
         reason: reason.trim(),
       },
     })
-    // ═══ END PHASE 1.10 ═══
     dispatch({ type: 'CLOSE_MODAL' })
     showToast(dispatch, `Balance ${action === 'add' ? 'added' : 'deducted'} for ${user.name}`, 'success')
   }
