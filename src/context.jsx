@@ -553,6 +553,7 @@ function reducer(state, action) {
         username: state.currentUser.name || state.currentUser.displayName,
         method: method,
         txId: txId,
+                senderNumber: action.payload.senderNumber || '',
       }
 
       const firestoreReq = {

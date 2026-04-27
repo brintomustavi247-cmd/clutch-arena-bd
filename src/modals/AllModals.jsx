@@ -306,7 +306,8 @@ export function AddMoneyModal() {
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState('bkash')
   const [txId, setTxId] = useState('')
-  const [copied, setCopied] = useState(false)
+   const [copied, setCopied] = useState(false)
+  const [senderNumber, setSenderNumber] = useState(currentUser?.phone || '')
 
   const brand = brandOf(method)
   const selectedMethod = ADD_MONEY_METHODS.find(m => m.id === method)
@@ -383,6 +384,7 @@ export function AddMoneyModal() {
     if (!isNumberSet) return showToast(dispatch, 'Admin has not set payment number yet. Contact admin.', 'error')
     const amt = parseFloat(amount)
     if (!amt || amt < 10) return showToast(dispatch, 'Minimum amount is 10 TK', 'error')
+      if (!senderNumber.trim() || senderNumber.trim().length < 11) return showToast(dispatch, 'Enter the number you sent money from', 'error')
     if (!txId.trim()) return showToast(dispatch, 'Enter transaction ID (TrxID) from your payment app', 'error')
     if (txId.trim().length < 6) return showToast(dispatch, 'Transaction ID seems too short', 'error')
 
@@ -404,6 +406,7 @@ export function AddMoneyModal() {
         amount: amt,
         method: method.toUpperCase(),
         txId: txId.trim(),
+        senderNumber: senderNumber.trim(),
       }
     })
     dispatch({ type: 'CLOSE_MODAL' })
@@ -555,6 +558,44 @@ export function AddMoneyModal() {
       )}
       {/* ═══ END PHASE 1.8 ═══ */}
 
+            <section>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+          <div style={{ width: 4, height: 12, background: brand.primary, borderRadius: 9999, flexShrink: 0 }} />
+          <label style={{
+            fontFamily: "'Lexend', sans-serif", fontSize: 10, fontWeight: 600,
+            letterSpacing: '0.12em', textTransform: 'uppercase', color: '#c6c6c6', margin: 0,
+          }}>
+            Your {selectedMethod?.label || method.toUpperCase()} Number *
+          </label>
+        </div>
+        <input
+          style={{
+            width: '100%', height: 52,
+            borderRadius: 12,
+            border: `1px solid ${brand.primary}33`,
+            background: `${brand.primary}08`,
+            padding: '0 16px',
+            fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 700,
+            color: brand.primary,
+            outline: 'none', boxSizing: 'border-box',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+          placeholder="01XXXXXXXXX"
+          type="tel"
+          value={senderNumber}
+          onChange={e => setSenderNumber(e.target.value)}
+          maxLength={14}
+        />
+        <p style={{
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
+          fontSize: 10, color: '#555555', margin: '6px 0 0 0',
+          fontWeight: 500,
+        }}>
+          <i className="fa-solid fa-circle-info" style={{ marginRight: 4 }} />
+          The number you used to send money (so admin can verify)
+        </p>
+      </section>
+
       <section>
         <SectionHead>Select Amount</SectionHead>
         <div style={{
@@ -682,8 +723,9 @@ export function AddMoneyModal() {
           fontSize: 12, color: '#c6c6c6', lineHeight: 1.6, margin: 0,
         }}>
           <strong style={{ color: '#e5e1e4' }}>Step 1:</strong> Send {amount || '___'} TK to the number above via {selectedMethod?.label || method.toUpperCase()}.<br />
-          <strong style={{ color: '#e5e1e4' }}>Step 2:</strong> Copy the Transaction ID (TrxID) from your payment app.<br />
-          <strong style={{ color: '#e5e1e4' }}>Step 3:</strong> Paste it below and submit.<br />
+          <strong style={{ color: '#e5e1e4' }}>Step 2:</strong> Enter YOUR number (the one you sent from).<br />
+          <strong style={{ color: '#e5e1e4' }}>Step 3:</strong> Copy the TrxID from your payment app.<br />
+          <strong style={{ color: '#e5e1e4' }}>Step 4:</strong> Paste it below and submit.<br />
           <strong style={{ color: '#facc15' }}>Note:</strong> Balance will update only after admin verifies your payment.
         </p>
       </section>
