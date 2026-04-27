@@ -23,6 +23,8 @@ const ADMIN_NAV_ITEMS = [
 export default function MobileNav() {
   const { state, navigate, isAdmin } = useApp()
   const { currentView } = state
+    const pendingFinance = (state.pendingWithdrawals?.length || 0) + (state.pendingAddMoneyRequests?.length || 0)
+    
 
   // ═══ ADMIN MOBILE NAV — horizontal scroll (your old slide system) ═══
   if (isAdmin) {
@@ -105,7 +107,28 @@ export default function MobileNav() {
                   transition: 'color 0.2s',
                 }}>
                   {item.label}
-                </span>
+                </span>                {item.id === 'admin-finance' && pendingFinance > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: 2,
+                    right: 6,
+                    minWidth: 16,
+                    height: 16,
+                    borderRadius: 8,
+                    background: '#ef4444',
+                    color: '#fff',
+                    fontSize: 9,
+                    fontWeight: 700,
+                    fontFamily: "'Inter', sans-serif",
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 4px',
+                    boxShadow: '0 2px 6px rgba(239,68,68,0.4)',
+                  }}>
+                    {pendingFinance > 9 ? '9+' : pendingFinance}
+                  </span>
+                )}
               </button>
             )
           })}

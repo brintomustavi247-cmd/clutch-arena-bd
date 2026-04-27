@@ -6,6 +6,7 @@ export default function Sidebar() {
   const { currentView, currentUser } = state
 
   const unreadCount = state.notifications.filter(n => !n.read).length
+    const pendingFinance = (state.pendingWithdrawals?.length || 0) + (state.pendingAddMoneyRequests?.length || 0)
 
   const handleNav = (id) => {
     // Safeguard: redirect broken 'payments' id to 'wallet'
