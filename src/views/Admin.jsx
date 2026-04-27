@@ -2106,7 +2106,7 @@ const ADMIN_TABS = [
   { id: 'admin-rooms', label: 'Rooms', icon: 'fa-key', color: '#fbbf24' },
   { id: 'admin-results', label: 'Results', icon: 'fa-clipboard-check', color: '#22c55e' },
   { id: 'admin-users', label: 'Users', icon: 'fa-users-gear', color: '#6c8cff' },
-  { id: 'admin-finance', label: 'Finance', icon: 'fa-money-bill-transfer', color: '#ef4444', badge: (state.pendingAddMoneyRequests || []).length + (state.pendingWithdrawals || []).length },
+  { id: 'admin-finance', label: 'Finance', icon: 'fa-money-bill-transfer', color: '#ef4444' },
   { id: 'admin-add-money', label: 'Add Money', icon: 'fa-wallet', color: '#22c55e' },
   { id: 'admin-payments', label: 'Payments', icon: 'fa-credit-card', color: '#f59e0b' },
   { id: 'admin-owners', label: 'Owner Panel', icon: 'fa-crown', color: '#fbbf24' },
@@ -2190,12 +2190,12 @@ export default function Admin() {
                 )}
                 <i className={'fa-solid ' + t.icon} style={{ fontSize: 12 }}></i>
                 {t.label}
-                {t.badge > 0 && (
+                {t.id === 'admin-finance' && ((state.pendingAddMoneyRequests || []).length + (state.pendingWithdrawals || []).length) > 0 && (
                   <span style={{
                     padding: '1px 7px', borderRadius: 8, fontSize: 9, fontWeight: 700,
                     fontFamily: 'var(--font-display)', background: t.color + '25', color: t.color,
                     marginLeft: 2,
-                  }}>{t.badge}</span>
+                  }}>{(state.pendingAddMoneyRequests || []).length + (state.pendingWithdrawals || []).length}</span>
                 )}
               </button>
             )
