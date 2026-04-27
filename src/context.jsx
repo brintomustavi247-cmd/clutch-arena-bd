@@ -1,6 +1,6 @@
 import { fetchUser, createUser, createMatchInDb, updateMatchInDb, getSettings, saveSettings, createAddMoneyRequest, fetchPendingAddMoneyRequests, approveAddMoneyRequest, rejectAddMoneyRequest, distributePrizes, cancelMatchAndRefund, checkDuplicateTXID, adminAdjustBalance, addJoinToMatch, addWithdrawalToCloud, logActivityToCloud, addTransactionToCloud, subscribeToMatches, subscribeToSettings, subscribeToUser } from './db'
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
-import { calculateMatchEconomics, calculateJoinCost, showToast } from '../utils'
+import { calculateMatchEconomics, calculateJoinCost, showToast } from './utils'
 import { auth } from './firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 const AppContext = createContext(null)
