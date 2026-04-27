@@ -131,6 +131,7 @@ const initialState = {
   pendingBalanceAdjust: null,
   rateLimited: false,
   requireIGN: false,
+  joinBlocked: null,
 }
 
 // ===== REDUCER =====
@@ -390,7 +391,7 @@ function reducer(state, action) {
         (m.status === 'upcoming' || m.status === 'live') &&
         m.participants?.includes(state.currentUser?.id)
       )
-      if (alreadyActive) return state
+      if (alreadyActive) return { ...state, joinBlocked: 'You already have an active match. Wait for it to finish before joining another.' }
       // ═══ END PHASE 4.5 ═══
       const cost = calculateJoinCost(match.mode, match.entryFee)
       if ((state.currentUser?.balance || 0) < cost) return state
@@ -431,6 +432,7 @@ function reducer(state, action) {
 
       return {
         ...state,
+         joinBlocked: null,
         matches: state.matches.map(m => m.id === matchId ? updatedMatch : m),
         currentUser: updatedUser,
         users: state.users.map(u => u.id === updatedUser.id ? updatedUser : u),
@@ -616,6 +618,8 @@ function reducer(state, action) {
       return { ...state, rateLimited: false }
     case 'CLEAR_REQUIRE_IGN':
       return { ...state, requireIGN: false }
+    case 'CLEAR_JOIN_BLOCKED':
+      return { ...state, joinBlocked: null }
 
     // Admin approves add money request
     case 'APPROVE_ADD_MONEY': {
@@ -1022,7 +1026,16 @@ export function AppProvider({ children }) {
         dispatch({ type: 'BALANCE_ADJUST_ERROR', payload: { userId } })
       })
   }, [state.pendingBalanceAdjust])
+  // ═══ PHASE 4.5: Show toast when join is blocked ═══
+  useEffect(() => {
+    if (state.joinBlocked) {
+      showToast(dispatch, state.joinBlocked, 'error')
+      dispatch({ type: 'CLEAR_JOIN_BLOCKED' })
+    }
+  }, [state.joinBlocked])
+  // ═══ END PHASE 4.5 ═══
 
+  // 1-second tick
   // 1-second tick
   useEffect(() => {
     const i = setInterval(() => dispatch({ type: 'TICK' }), 1000)
