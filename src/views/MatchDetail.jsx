@@ -795,6 +795,66 @@ export default function MatchDetail() {
         </div>
       )}
 
+      {/* ═══ PHASE 4.4: NO REFUND WARNING — shown before join button ═══ */}
+      {cu && !joined && !full && phase !== 'completed' && (
+        <div style={{
+          borderRadius: 10, overflow: 'hidden', marginBottom: 14,
+          border: '2px solid #f87171',
+          background: 'linear-gradient(135deg, rgba(248,113,113,0.10) 0%, rgba(248,113,113,0.02) 60%), #1c1b1d',
+          boxShadow: '0 0 16px rgba(248,113,113,0.06)',
+        }}>
+          <div style={{
+            padding: '10px 14px',
+            background: 'linear-gradient(135deg, rgba(248,113,113,0.12) 0%, rgba(248,113,113,0.04) 100%)',
+            borderBottom: '1px solid rgba(248,113,113,0.15)',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <i className="fa-solid fa-shield-halved" style={{ color: '#f87171', fontSize: 13 }} />
+            <span style={{
+              fontFamily: "'Lexend', sans-serif", fontSize: 12, fontWeight: 700,
+              color: '#f87171', letterSpacing: '0.06em', textTransform: 'uppercase',
+            }}>
+              No Refund Policy
+            </span>
+          </div>
+          <div style={{ padding: '10px 14px' }}>
+            <p style={{
+              fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 11,
+              color: '#f87171', fontWeight: 700, margin: '0 0 6px 0', lineHeight: 1.4,
+            }}>
+              Entry fee is NON-REFUNDABLE once you join this match.
+            </p>
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: '4px 12px',
+              fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 10,
+              color: '#bdc8cf', fontWeight: 500,
+            }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <i className="fa-solid fa-xmark" style={{ color: '#f87171', fontSize: 9 }} /> No-show
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <i className="fa-solid fa-xmark" style={{ color: '#f87171', fontSize: 9 }} /> Disconnect
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <i className="fa-solid fa-xmark" style={{ color: '#f87171', fontSize: 9 }} /> Match lost
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <i className="fa-solid fa-xmark" style={{ color: '#f87171', fontSize: 9 }} /> Cannot leave
+              </span>
+            </div>
+            <p style={{
+              fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 10,
+              color: '#4ade80', fontWeight: 600, margin: '8px 0 0 0',
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              <i className="fa-solid fa-circle-info" style={{ fontSize: 9 }} />
+              Only admin-cancelled matches get full refund
+            </p>
+          </div>
+        </div>
+      )}
+      {/* ═══ END PHASE 4.4 ═══ */}
+
       {/* ACTION BAR */}
       <div>
         {!cu ? (
