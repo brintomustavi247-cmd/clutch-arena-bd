@@ -277,6 +277,56 @@ export function JoinMatchModal({ matchId, data }) {
         </div>
       </div>
 
+      {/* ═══ PHASE 4.2: NO REFUND WARNING ═══ */}
+      <div style={{
+        borderRadius: 10, overflow: 'hidden', marginBottom: 14,
+        border: '2px solid #f87171',
+        background: 'linear-gradient(135deg, rgba(248,113,113,0.12) 0%, rgba(248,113,113,0.03) 60%), #1c1b1d',
+        boxShadow: '0 0 20px rgba(248,113,113,0.08)',
+      }}>
+        <div style={{
+          padding: '10px 14px',
+          background: 'linear-gradient(135deg, rgba(248,113,113,0.15) 0%, rgba(248,113,113,0.05) 100%)',
+          borderBottom: '1px solid rgba(248,113,113,0.2)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <i className="fa-solid fa-shield-halved" style={{ color: '#f87171', fontSize: 14 }} />
+          <span style={{
+            fontFamily: "'Lexend', sans-serif", fontSize: 13, fontWeight: 700,
+            color: '#f87171', letterSpacing: '0.06em', textTransform: 'uppercase',
+          }}>
+            No Refund Policy
+          </span>
+        </div>
+        <div style={{ padding: '12px 14px' }}>
+          <p style={{
+            fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 12,
+            color: '#f87171', fontWeight: 700, margin: '0 0 8px 0', lineHeight: 1.4,
+          }}>
+            Entry fee is NON-REFUNDABLE once you join.
+          </p>
+          <ul style={{
+            margin: 0, paddingLeft: 16,
+            fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 11,
+            color: '#bdc8cf', fontWeight: 500, lineHeight: 1.8,
+          }}>
+            <li>No-show = No refund</li>
+            <li>Disconnect / lag = No refund</li>
+            <li>Match lost = No refund</li>
+            <li>You <strong style={{ color: '#f87171' }}>cannot</strong> leave or cancel after joining</li>
+          </ul>
+          <p style={{
+            fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 11,
+            color: '#4ade80', fontWeight: 600, margin: '10px 0 0 0',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            <i className="fa-solid fa-circle-info" style={{ fontSize: 10 }} />
+            Only admin-cancelled matches get full refund
+          </p>
+        </div>
+      </div>
+      {/* ═══ END PHASE 4.2 ═══ */}
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <button style={M.btnGhost} onClick={() => dispatch({ type: 'CLOSE_MODAL' })}>Cancel</button>
         <button

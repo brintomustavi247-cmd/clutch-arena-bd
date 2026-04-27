@@ -1,6 +1,6 @@
 import { fetchUser, createUser, createMatchInDb, updateMatchInDb, getSettings, saveSettings, createAddMoneyRequest, fetchPendingAddMoneyRequests, approveAddMoneyRequest, rejectAddMoneyRequest, distributePrizes, cancelMatchAndRefund, checkDuplicateTXID, adminAdjustBalance, addJoinToMatch, addWithdrawalToCloud, logActivityToCloud, addTransactionToCloud, subscribeToMatches, subscribeToSettings, subscribeToUser } from './db'
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
-import { calculateMatchEconomics, calculateJoinCost } from './utils'
+import { calculateMatchEconomics, calculateJoinCost, showToast } from '../utils'
 import { auth } from './firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 const AppContext = createContext(null)
@@ -130,6 +130,7 @@ const initialState = {
   pendingCancelMatch: null,
   pendingBalanceAdjust: null,
   rateLimited: false,
+  requireIGN: false,
 }
 
 // ===== REDUCER =====
@@ -238,20 +239,37 @@ function reducer(state, action) {
           teamName: dbData?.teamName || state.currentUser?.teamName || '',
           createdAt: dbData?.createdAt || state.currentUser?.createdAt || new Date().toISOString()
         },
-        currentView: state.isLoggedIn ? state.currentView : (role === 'owner' ? 'admin-overview' : 'dashboard'),
+          currentView: state.isLoggedIn ? state.currentView : (role === 'owner' ? 'admin-overview' : 'dashboard'),
+        requireIGN: (!dbData?.ign || !dbData?.ign.trim()) && role !== 'owner',
         loading: false,
         modal: null,
       }
     }
-        case 'FIREBASE_USER_UPDATE': {
+    case 'FIREBASE_USER_UPDATE': {
       if (!state.currentUser) return state
-      return {
+      // ═══ PHASE 4.10: Banned user = immediate logout ═══
+      if (action.payload?.banned === true) {
+        return {
+          ...state, isLoggedIn: false, currentUser: null,
+          currentView: 'login', viewParam: null, modal: null,
+          toasts: [...state.toasts, {
+            id: 'banned_' + Date.now(), type: 'error',
+            text: 'Your account has been banned by admin.',
+            removing: false,
+          }],
+          sidebarOpen: false,
+        }
+      }
+      // ═══ PHASE 4.1: If user just set IGN, clear requireIGN flag ═══
+      const newState = {
         ...state,
         currentUser: { ...state.currentUser, ...action.payload },
       }
+      if (state.requireIGN && action.payload?.ign?.trim()) {
+        newState.requireIGN = false
+      }
+      return newState
     }
-
-    case 'FIREBASE_LOGOUT':
 
     case 'FIREBASE_LOGOUT':
       if (state.currentUser?.firebaseUid) {
@@ -366,7 +384,14 @@ function reducer(state, action) {
       const { matchId, teamName } = action.payload
       const match = state.matches.find(m => m.id === matchId)
       if (!match || match.status === 'completed' || match.status === 'cancelled' || match.joinedCount >= match.maxSlots) return state
-      if (match.participants?.includes(state.currentUser?.id)) return state
+       if (match.participants?.includes(state.currentUser?.id)) return state
+      // ═══ PHASE 4.5: Match overlap prevention — one active match at a time ═══
+      const alreadyActive = state.matches.some(m =>
+        (m.status === 'upcoming' || m.status === 'live') &&
+        m.participants?.includes(state.currentUser?.id)
+      )
+      if (alreadyActive) return state
+      // ═══ END PHASE 4.5 ═══
       const cost = calculateJoinCost(match.mode, match.entryFee)
       if ((state.currentUser?.balance || 0) < cost) return state
 
@@ -589,6 +614,8 @@ function reducer(state, action) {
 
     case 'CLEAR_RATE_LIMIT':
       return { ...state, rateLimited: false }
+    case 'CLEAR_REQUIRE_IGN':
+      return { ...state, requireIGN: false }
 
     // Admin approves add money request
     case 'APPROVE_ADD_MONEY': {

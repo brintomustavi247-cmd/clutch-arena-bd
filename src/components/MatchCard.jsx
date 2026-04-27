@@ -85,8 +85,8 @@ export default function MatchCard({ match, animated }) {
 
       {/* Content */}
       <div style={{ padding: '16px 16px 16px 19px', position: 'relative', zIndex: 20 }}>
-        {/* Status badge */}
-        <div style={{ marginBottom: 6 }}>
+        {/* Status badge + NO REFUND */}
+        <div style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center',
             padding: '2px 8px', borderRadius: 0,
@@ -102,8 +102,18 @@ export default function MatchCard({ match, animated }) {
             )}
             {sc.label}
           </div>
+          {!isCompleted && (
+            <span style={{
+              padding: '2px 7px', borderRadius: 0,
+              background: 'rgba(248,113,113,0.15)',
+              border: '1px solid rgba(248,113,113,0.25)',
+              fontFamily: "'Inter', sans-serif", fontSize: 9, fontWeight: 700,
+              color: '#f87171', letterSpacing: '0.08em', textTransform: 'uppercase',
+            }}>
+              NO REFUND
+            </span>
+          )}
         </div>
-
         {/* Title */}
         <h3 style={{
           fontFamily: "'Lexend', sans-serif", fontSize: 15, fontWeight: 700,
