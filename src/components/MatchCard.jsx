@@ -1,6 +1,19 @@
 import { useApp } from '../context'
 import { formatTK, modeColor, mapIcon, getMatchPhase, getMatchCountdown, slotPercent, phaseColor, phaseLabel } from '../utils'
 
+function parseMatchTime(startTime) {
+  if (!startTime) return null
+  if (startTime && typeof startTime.toDate === 'function') return startTime.toDate().getTime()
+  if (typeof startTime === 'number') return startTime
+  if (typeof startTime === 'string') {
+    const ts = new Date(startTime.replace(' ', 'T')).getTime()
+    if (!isNaN(ts)) return ts
+    const ts2 = new Date(startTime).getTime()
+    if (!isNaN(ts2)) return ts2
+  }
+  return null
+}
+
 export default function MatchCard({ match, animated }) {
   const { dispatch, navigate } = useApp()
   const phase = getMatchPhase(match)
@@ -12,6 +25,29 @@ export default function MatchCard({ match, animated }) {
 
   const prizePoolValue = match.prizePool || Math.round(match.entryFee * match.maxSlots * 0.8)
 
+  // Parse scheduled time
+  const matchTimeStr = (() => {
+    const ts = parseMatchTime(match.startTime)
+    if (!ts) return ''
+    const d = new Date(ts)
+    let h = d.getHours()
+    const m = String(d.getMinutes()).padStart(2, '0')
+    const ap = h >= 12 ? 'PM' : 'AM'
+    h = h % 12 || 12
+    const day = d.getDate()
+    const mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+    return `${h}:${m} ${ap} · ${day} ${mons[d.getMonth()]}`
+  })()
+
+  // Countdown — only show when < 1 hour
+  const showCountdown = isUpcoming && countdown > 0 && countdown < 3600000
+  const countdownStr = showCountdown ? (() => {
+    const m = Math.floor(countdown / 60000)
+    const s = Math.floor((countdown % 60000) / 1000)
+    if (m >= 1) return `${m}M ${String(s).padStart(2, '0')}S`
+    return `${s}S`
+  })() : ''
+
   const statusConfig = {
     live: {
       label: 'LIVE',
@@ -20,9 +56,7 @@ export default function MatchCard({ match, animated }) {
       fillBar: '#e63946',
     },
     upcoming: {
-      label: isUpcoming && countdown > 0
-        ? `${Math.floor(countdown / 60000)}m left`
-        : 'STARTING SOON',
+      label: matchTimeStr || 'UPCOMING',
       badgeBg: '#61cdff', badgeColor: '#0e0e10',
       edgeColor: '#e3d7ff', showKinetic: false,
       fillBar: '#61cdff',
@@ -91,8 +125,8 @@ export default function MatchCard({ match, animated }) {
             display: 'inline-flex', alignItems: 'center',
             padding: '2px 8px', borderRadius: 0,
             background: sc.badgeBg, color: sc.badgeColor,
-            fontFamily: "'Lexend', sans-serif", fontSize: 10, fontWeight: 700,
-            fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '0.08em',
+            fontFamily: "'Inter', sans-serif", fontSize: 10, fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
           }}>
             {isLive && (
               <span style={{
@@ -114,10 +148,24 @@ export default function MatchCard({ match, animated }) {
             </span>
           )}
         </div>
+
+        {/* Countdown line — only when < 1 hour */}
+        {showCountdown && (
+          <div style={{
+            marginBottom: 4,
+            fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 700,
+            color: '#4ade80', letterSpacing: '0.02em',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            <i className="fa-solid fa-clock" style={{ fontSize: 11 }} />
+            Starts in {countdownStr}
+          </div>
+        )}
+
         {/* Title */}
         <h3 style={{
           fontFamily: "'Lexend', sans-serif", fontSize: 15, fontWeight: 700,
-        color: '#808090',
+          color: '#808090',
           textTransform: 'uppercase', letterSpacing: '-0.02em',
           margin: '0 0 12px', lineHeight: 1.2,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -206,7 +254,7 @@ export default function MatchCard({ match, animated }) {
       {/* Action area */}
       {!isCompleted && (
         <div style={{
-         background: '#2a2a2c',
+          background: '#2a2a2c',
           padding: '12px 16px 12px 19px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           position: 'relative', zIndex: 20,
