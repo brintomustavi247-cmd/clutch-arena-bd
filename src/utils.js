@@ -42,7 +42,6 @@ export function timeAgo(str) {
   const ts = parseMatchTime(str)
   if (!ts) return 'just now'
   const diff = Date.now() - ts
-  const diff = Date.now() - d.getTime()
   if (diff < 60000) return 'just now'
   if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago'
   if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago'
