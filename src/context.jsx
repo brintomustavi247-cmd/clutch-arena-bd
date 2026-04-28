@@ -1,4 +1,4 @@
-import { fetchUser, createUser, createMatchInDb, updateMatchInDb, getSettings, saveSettings, createAddMoneyRequest, fetchPendingAddMoneyRequests, approveAddMoneyRequest, rejectAddMoneyRequest, distributePrizes, cancelMatchAndRefund, checkDuplicateTXID, adminAdjustBalance, addJoinToMatch, addWithdrawalToCloud, logActivityToCloud, addTransactionToCloud, subscribeToMatches, subscribeToSettings, subscribeToUser, subscribeToWithdrawals, approveWithdrawalInCloud, rejectWithdrawalInCloud, subscribeToUserTransactions } from './db'
+import { fetchUser, createUser, createMatchInDb, updateMatchInDb, getSettings, saveSettings, createAddMoneyRequest, fetchPendingAddMoneyRequests, approveAddMoneyRequest, rejectAddMoneyRequest, distributePrizes, cancelMatchAndRefund, checkDuplicateTXID, adminAdjustBalance, addJoinToMatch, addWithdrawalToCloud, logActivityToCloud, addTransactionToCloud, subscribeToMatches, subscribeToSettings, subscribeToUser, subscribeToWithdrawals, approveWithdrawalInCloud, rejectWithdrawalInCloud, subscribeToUserTransactions, updateUser } from './db'
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
 import { calculateMatchEconomics, calculateJoinCost, showToast } from './utils'
 import { auth } from './firebase'
@@ -618,8 +618,10 @@ function reducer(state, action) {
         amount: action.payload.amount, method: action.payload.method, account: action.payload.account,
         createdAt: getTimeStr(0), status: 'pending',
       }
-            addWithdrawalToCloud(wd).catch(err => console.error("Cloud withdraw sync failed:", err))
+      addWithdrawalToCloud(wd).catch(err => console.error("Cloud withdraw sync failed:", err))
       addTransactionToCloud({ id: 'tx' + Date.now(), type: 'withdraw', amount: action.payload.amount, desc: `Withdrawal to ${action.payload.method}`, date: getTimeStr(0), status: 'pending', userId: state.currentUser.id, username: state.currentUser.name || state.currentUser.displayName, ign: state.currentUser.ign || '' }).catch(() => {})
+      // Deduct balance in Firestore so subscribeToUser doesn't reset it
+      updateUser(state.currentUser.id, { balance: state.currentUser.balance - action.payload.amount }).catch(err => console.error("Failed to deduct balance in Firestore:", err))
       return {
         ...state,
         currentUser: { ...state.currentUser, balance: state.currentUser.balance - action.payload.amount },

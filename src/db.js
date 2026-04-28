@@ -420,13 +420,6 @@ export async function approveWithdrawalInCloud(wdId, userId, amount) {
   const wdRef = doc(db, 'withdrawals', wdId)
   await updateDoc(wdRef, { status: 'approved', processedAt: now })
 
-  const userRef = doc(db, 'users', userId)
-  const userSnap = await getDoc(userRef)
-  if (userSnap.exists()) {
-    const userData = userSnap.data()
-    await updateDoc(userRef, { balance: (userData.balance || 0) + amount })
-  }
-
   const txId = 'tx_wd_ok_' + Date.now()
   await setDoc(doc(db, 'transactions', txId), {
     id: txId, userId, amount,
@@ -435,7 +428,6 @@ export async function approveWithdrawalInCloud(wdId, userId, amount) {
     date: now, createdAt: now,
   })
 }
-
 export async function rejectWithdrawalInCloud(wdId, userId, amount) {
   const now = new Date().toISOString()
   const wdRef = doc(db, 'withdrawals', wdId)
