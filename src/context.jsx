@@ -154,11 +154,11 @@ function reducer(state, action) {
           phone: dbData?.phone || phone,
           email: dbData?.email || email,
           firebaseUid: authUser.uid,
-          balance: dbData?.balance ?? state.currentUser?.balance ?? 0,
-          kills: dbData?.kills ?? state.currentUser?.kills ?? 0,
-          wins: dbData?.wins ?? state.currentUser?.wins ?? 0,
-          matchesPlayed: dbData?.matchesPlayed ?? state.currentUser?.matchesPlayed ?? 0,
-          earnings: dbData?.earnings ?? state.currentUser?.earnings ?? 0,
+          balance: dbData?.balance ?? 0,
+          kills: dbData?.kills ?? 0,
+          wins: dbData?.wins ?? 0,
+          matchesPlayed: dbData?.matchesPlayed ?? 0,
+          earnings: dbData?.earnings ?? 0,
           banned: dbData?.banned || false,
           status: dbData?.status || 'active',
           permissions: dbData?.permissions || state.currentUser?.permissions || [],
@@ -593,7 +593,7 @@ function reducer(state, action) {
     case 'LOAD_PENDING_REQUESTS':
       return { ...state, pendingAddMoneyRequests: action.payload }
           case 'LOAD_WITHDRAWALS':
-      return { ...state, pendingWithdrawals: action.payload }
+      return { ...state, pendingWithdrawals: (action.payload || []).filter(w => w.status === 'pending') }
           case 'LOAD_TRANSACTIONS':
       return { ...state, transactions: action.payload }
 
@@ -1016,14 +1016,14 @@ export function AppProvider({ children }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.isLoggedIn])
 
-  // Persist to localStorage
+  // Persist to localStorage — ONLY auth state, NOT balance/data
   useEffect(() => {
-       saveToLS({
+    saveToLS({
       isLoggedIn: state.isLoggedIn,
-      currentUser: state.currentUser,
+      currentUser: state.isLoggedIn ? { id: state.currentUser?.id, firebaseUid: state.currentUser?.firebaseUid } : null,
       language: state.language,
     })
- }, [state.isLoggedIn, state.currentUser, state.language])
+  }, [state.isLoggedIn, state.currentUser?.id, state.currentUser?.firebaseUid, state.language])
   // Auto phase detection
   useEffect(() => {
     const now = Date.now()
