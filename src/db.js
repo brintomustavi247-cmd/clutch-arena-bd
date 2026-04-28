@@ -456,10 +456,19 @@ export async function rejectWithdrawalInCloud(wdId, userId, amount) {
 
 export function subscribeToUserTransactions(uid, onUpdate) {
   const txCol = collection(db, 'transactions')
-  const q = query(txCol, where('userId', '==', uid), orderBy('date', 'desc'))
+  const q = query(txCol, where('userId', '==', uid))
   const unsubscribe = onSnapshot(q, (snap) => {
     const results = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    // Sort by date descending on client-side to avoid needing composite index
+    results.sort((a, b) => {
+      const dateA = new Date(a.date || 0).getTime()
+      const dateB = new Date(b.date || 0).getTime()
+      return dateB - dateA
+    })
     onUpdate(results)
+  }, (error) => {
+    console.error('[DB] Transaction subscription error:', error)
+    onUpdate([])
   })
   return unsubscribe
 }
