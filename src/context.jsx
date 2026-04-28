@@ -1,4 +1,4 @@
-import { fetchUser, createUser, createMatchInDb, updateMatchInDb, getSettings, saveSettings, createAddMoneyRequest, fetchPendingAddMoneyRequests, approveAddMoneyRequest, rejectAddMoneyRequest, distributePrizes, cancelMatchAndRefund, checkDuplicateTXID, adminAdjustBalance, addJoinToMatch, addWithdrawalToCloud, logActivityToCloud, addTransactionToCloud, subscribeToMatches, subscribeToSettings, subscribeToUser, subscribeToWithdrawals, approveWithdrawalInCloud, rejectWithdrawalInCloud, subscribeToUserTransactions, updateUser } from './db'
+import { fetchUser, createUser, createMatchInDb, updateMatchInDb, getSettings, saveSettings, createAddMoneyRequest, fetchPendingAddMoneyRequests, approveAddMoneyRequest, rejectAddMoneyRequest, distributePrizes, cancelMatchAndRefund, checkDuplicateTXID, adminAdjustBalance, addJoinToMatch, addWithdrawalToCloud, logActivityToCloud, addTransactionToCloud, subscribeToMatches, subscribeToSettings, subscribeToUser, subscribeToWithdrawals, approveWithdrawalInCloud, rejectWithdrawalInCloud, subscribeToUserTransactions, updateUser, subscribeToAllUsers } from './db'
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
 import { calculateMatchEconomics, calculateJoinCost, showToast } from './utils'
 import { auth } from './firebase'
@@ -608,6 +608,8 @@ function reducer(state, action) {
       return { ...state, pendingWithdrawals: (action.payload || []).filter(w => w.status === 'pending') }
           case 'LOAD_TRANSACTIONS':
       return { ...state, transactions: action.payload }
+          case 'LOAD_USERS':
+      return { ...state, users: action.payload }
 
     case 'WITHDRAW': {
       if (state.currentUser.balance < action.payload.amount) return state
@@ -908,6 +910,13 @@ export function AppProvider({ children }) {
     })
     return () => unsubscribe()
   }, [isAdmin])
+    // 🚀 REAL-TIME: All users — for leaderboard
+  useEffect(() => {
+    const unsubscribe = subscribeToAllUsers((users) => {
+      dispatch({ type: 'LOAD_USERS', payload: users })
+    })
+    return () => unsubscribe()
+  }, [])
     // 🚀 REAL-TIME: User transaction history — instant sync to wallet
   useEffect(() => {
     const uid = state.currentUser?.firebaseUid
@@ -1044,8 +1053,15 @@ export function AppProvider({ children }) {
     let changed = false
     const updated = state.matches.map(m => {
       if (!m.startTime) return m
-      const start = new Date(m.startTime.replace(' ', 'T')).getTime()
-      if (isNaN(start)) return m
+      let start = null
+      if (m.startTime && typeof m.startTime.toDate === 'function') start = m.startTime.toDate().getTime()
+      else if (typeof m.startTime === 'number') start = m.startTime
+      else if (typeof m.startTime === 'string') {
+        const t = new Date(m.startTime.replace(' ', 'T')).getTime()
+        if (!isNaN(t)) start = t
+        else { const t2 = new Date(m.startTime).getTime(); if (!isNaN(t2)) start = t2 }
+      }
+      if (!start) return m
       // 🔒 Guard: Don't auto-change cancelled, completing, or cancelling matches
       if (m.status === 'cancelled' || m.status === 'completing' || m.status === 'cancelling') return m
       const duration = m.gameType === 'CS' ? 15 * 60000 : 25 * 60000

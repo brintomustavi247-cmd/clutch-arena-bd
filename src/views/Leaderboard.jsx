@@ -9,30 +9,26 @@ export default function Leaderboard() {
 
   if (!currentUser) return null
 
-  const sortedPlayers = [...users].filter(u => !u.banned).sort((a, b) => b.earnings - a.earnings)
-  const sortedStandings = [...standings].sort((a, b) => b.points - a.points || a.played - b.played)
+  const activeUsers = users.filter(u => u.ign && !u.banned && u.role !== 'owner' && u.role !== 'admin')
 
-  const tabs = [
-    { key: 'standings', label: 'Standings' },
-    { key: 'players', label: 'Top Players' },
-  ]
+  const sortedPlayers = (() => {
+    const s = [...activeUsers].sort((a, b) => (b.earnings || 0) - (a.earnings || 0))
+    return tab === 'wins' ? [...activeUsers].sort((a, b) => (b.wins || 0) - (a.wins || 0))
+      : tab === 'kills' ? [...activeUsers].sort((a, b) => (b.kills || 0) - (a.kills || 0))
+      : s
+  })()
 
-  // Podium data (always top 3 by earnings for players, top 3 by points for standings)
-  const podiumPlayers = tab === 'players'
-    ? sortedPlayers.slice(0, 3).map((u, i) => ({ ...u, xp: formatTK(u.earnings) }))
-    : sortedStandings.slice(0, 3).map((t, i) => ({ ...t, name: t.teamName, xp: `${t.points} XP` }))
-  
-  // Ensure we have all 3 podium positions before rendering
+  const podiumPlayers = sortedPlayers.slice(0, 3).map(u => ({
+    ...u,
+    xp: tab === 'earnings' ? formatTK(u.earnings || 0) : tab === 'wins' ? `${u.wins || 0} W` : `${u.kills || 0} K`
+  }))
+
   const hasPodium = podiumPlayers.length === 3
 
-  // Rest of list (rank 4+)
-  const restList = tab === 'players'
-    ? sortedPlayers.slice(3)
-    : sortedStandings.slice(3)
+  const restList = sortedPlayers.slice(3)
 
-  // User's rank in players list
   const userPlayerRank = sortedPlayers.findIndex(u => u.id === currentUser.id)
-  const userRank = userPlayerRank >= 0 ? userPlayerRank + 1 : 42
+  const userRank = userPlayerRank >= 0 ? userPlayerRank + 1 : null
 
   const initial = (name) => name ? name[0].toUpperCase() : '?'
 
@@ -80,13 +76,16 @@ export default function Leaderboard() {
         borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)',
         marginBottom: 40, width: 'fit-content',
       }}>
-        {['Daily', 'Weekly', 'All Time'].map(t => {
-          const active = tab === t.toLowerCase().replace(' ', '')
-          const key = t.toLowerCase().replace(' ', '')
+        {[
+          { key: 'earnings', label: 'Earnings' },
+          { key: 'wins', label: 'Wins' },
+          { key: 'kills', label: 'Kills' },
+        ].map(t => {
+          const active = tab === t.key
           return (
             <button
-              key={key}
-              onClick={() => setTab(key)}
+              key={t.key}
+              onClick={() => setTab(t.key)}
               style={{
                 padding: '8px 24px', borderRadius: 8, border: 'none',
                 fontFamily: "'Lexend', sans-serif", fontSize: 13, fontWeight: 600,
@@ -336,7 +335,7 @@ export default function Leaderboard() {
                 fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 700,
                 color: isMe ? '#61cdff' : '#e5e1e4',
               }}>
-                {tab === 'players' ? formatTK(item.earnings) : item.points}
+                {tab === 'earnings' ? formatTK(item.earnings || 0) : tab === 'wins' ? `${item.wins || 0}` : `${item.kills || 0}`}
               </div>
             </div>
           )
@@ -344,14 +343,14 @@ export default function Leaderboard() {
       </div>
 
       {/* ═══ YOUR RANK BANNER ═══ */}
-      <div style={{
-        background: 'rgba(97,205,255,0.05)',
-        border: '1px solid rgba(97,205,255,0.1)',
-        borderRadius: 12, padding: '16px 24px',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: 16, flexWrap: 'wrap', gap: 12,
-      }}>
-        <div>
+      {userRank && (
+        <div style={{
+          background: 'rgba(97,205,255,0.05)',
+          border: '1px solid rgba(97,205,255,0.1)',
+          borderRadius: 12, padding: '16px 24px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: 16, flexWrap: 'wrap', gap: 12,
+        }}>
           <span style={{
             fontSize: 12, fontWeight: 700, color: '#889299',
             fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -359,28 +358,24 @@ export default function Leaderboard() {
           }}>
             Your Ranking
           </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontFamily: "'Lexend', sans-serif", fontSize: 24, fontWeight: 700, color: '#61cdff' }}>
+              #{userRank}
+            </span>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: '#e5e1e4' }}>
+              {podiumPlayers[userPlayerRank]?.xp || 'N/A'}
+            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, color: '#0e0e0e',
+              background: '#61cdff', padding: '3px 10px', borderRadius: 4,
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+            }}>
+              Top {Math.round((userRank / Math.max(sortedPlayers.length, 1)) * 100)}%
+            </span>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{
-            fontFamily: "'Lexend', sans-serif", fontSize: 24, fontWeight: 700, color: '#61cdff',
-          }}>
-            #{userRank}
-          </span>
-          <span style={{
-            fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: '#e5e1e4',
-          }}>
-            {tab === 'players' ? formatTK(sortedPlayers[userPlayerRank]?.earnings || 0) : sortedStandings[userPlayerRank]?.points || 0}
-          </span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, color: '#0e0e10',
-            background: '#61cdff', padding: '3px 10px', borderRadius: 4,
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            textTransform: 'uppercase', letterSpacing: '0.05em',
-          }}>
-            Top 15%
-          </span>
-        </div>
-      </div>
+      )}
 
       {/* ═══ TEAM STANDINGS (from standings data) ═══ */}
       {tab === 'standings' && (

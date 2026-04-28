@@ -454,6 +454,19 @@ export async function rejectWithdrawalInCloud(wdId, userId, amount) {
 //  User sees their transaction history update instantly
 // ══════════════════════════════════════
 
+// ══════════════════════════════════════
+//  ALL USERS — for leaderboard
+// ══════════════════════════════════════
+export function subscribeToAllUsers(onUpdate) {
+  const usersCol = collection(db, 'users')
+  const q = query(usersCol, orderBy('earnings', 'desc'))
+  const unsubscribe = onSnapshot(q, (snap) => {
+    const results = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    onUpdate(results)
+  })
+  return unsubscribe
+}
+
 export function subscribeToUserTransactions(uid, onUpdate) {
   const txCol = collection(db, 'transactions')
   const q = query(txCol, where('userId', '==', uid))
