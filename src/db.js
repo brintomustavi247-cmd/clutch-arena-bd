@@ -395,3 +395,17 @@ export function subscribeToUser(uid, onUpdate) {
   });
   return unsubscribe;
 }
+
+// ══════════════════════════════════════
+//  REAL-TIME WITHDRAWAL LISTENER
+//  Admin sees withdrawals instantly — no polling needed
+// ══════════════════════════════════════
+export function subscribeToWithdrawals(onUpdate) {
+  const wdCol = collection(db, 'withdrawals');
+  const q = query(wdCol, orderBy('createdAt', 'desc'));
+  const unsubscribe = onSnapshot(q, (snap) => {
+    const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    onUpdate(results);
+  });
+  return unsubscribe;
+}

@@ -1,4 +1,4 @@
-import { fetchUser, createUser, createMatchInDb, updateMatchInDb, getSettings, saveSettings, createAddMoneyRequest, fetchPendingAddMoneyRequests, approveAddMoneyRequest, rejectAddMoneyRequest, distributePrizes, cancelMatchAndRefund, checkDuplicateTXID, adminAdjustBalance, addJoinToMatch, addWithdrawalToCloud, logActivityToCloud, addTransactionToCloud, subscribeToMatches, subscribeToSettings, subscribeToUser } from './db'
+import { fetchUser, createUser, createMatchInDb, updateMatchInDb, getSettings, saveSettings, createAddMoneyRequest, fetchPendingAddMoneyRequests, approveAddMoneyRequest, rejectAddMoneyRequest, distributePrizes, cancelMatchAndRefund, checkDuplicateTXID, adminAdjustBalance, addJoinToMatch, addWithdrawalToCloud, logActivityToCloud, addTransactionToCloud, subscribeToMatches, subscribeToSettings, subscribeToUser, subscribeToWithdrawals } from './db'
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
 import { calculateMatchEconomics, calculateJoinCost, showToast } from './utils'
 import { auth } from './firebase'
@@ -667,6 +667,8 @@ function reducer(state, action) {
     // Load pending requests from Firestore (admin only)
     case 'LOAD_PENDING_REQUESTS':
       return { ...state, pendingAddMoneyRequests: action.payload }
+          case 'LOAD_WITHDRAWALS':
+      return { ...state, pendingWithdrawals: action.payload }
 
     case 'WITHDRAW': {
       if (state.currentUser.balance < action.payload.amount) return state
@@ -809,11 +811,10 @@ function reducer(state, action) {
           : state.currentUser,
       }
     }
-
     case 'APPROVE_WITHDRAW':
       return {
         ...state,
-        pendingWithdrawals: state.pendingWithdrawals.filter(w => w.id !== action.payload),
+        pendingWithdrawals: state.pendingWithdrawals.filter(w => w.id !== action.payload && w.status === 'pending'),
         transactions: state.transactions.map(tx =>
           tx.id === action.payload ? { ...tx, status: 'completed' } : tx
         ),
@@ -821,7 +822,7 @@ function reducer(state, action) {
     case 'REJECT_WITHDRAW':
       return {
         ...state,
-        pendingWithdrawals: state.pendingWithdrawals.filter(w => w.id !== action.payload),
+        pendingWithdrawals: state.pendingWithdrawals.filter(w => w.id !== action.payload && w.status === 'pending'),
         transactions: state.transactions.map(tx =>
           tx.id === action.payload ? { ...tx, status: 'rejected', desc: tx.desc + ' (Rejected)' } : tx
         ),
@@ -954,6 +955,15 @@ export function AppProvider({ children }) {
     loadPending()
     const interval = setInterval(loadPending, 5000)
     return () => clearInterval(interval)
+  }, [isAdmin])
+
+  // 🚀 REAL-TIME: Withdrawal requests — instant sync to admin panel
+  useEffect(() => {
+    if (!isAdmin) return
+    const unsubscribe = subscribeToWithdrawals((withdrawals) => {
+      dispatch({ type: 'LOAD_WITHDRAWALS', payload: withdrawals })
+    })
+    return () => unsubscribe()
   }, [isAdmin])
 
   // 🚀 PHASE 2.7: Real-time match listener
