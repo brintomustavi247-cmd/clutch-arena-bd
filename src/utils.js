@@ -39,7 +39,9 @@ export function formatTimeShort(ms) {
 
 // Relative time — "5m ago"
 export function timeAgo(str) {
-  const d = new Date(str.replace(' ', 'T'))
+  const ts = parseMatchTime(str)
+  if (!ts) return 'just now'
+  const diff = Date.now() - ts
   const diff = Date.now() - d.getTime()
   if (diff < 60000) return 'just now'
   if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago'
@@ -54,17 +56,34 @@ export function nowTimestamp() {
 
 // Premium date for match detail — "19 April 2026, 1:05 AM"
 export function formatMatchDate(str) {
-  const d = new Date(str.replace(' ', 'T'))
+  const ts = parseMatchTime(str)
+  if (!ts) return 'TBA'
+  const d = new Date(ts)
   return d.toLocaleDateString('en-US', {
     day: 'numeric', month: 'long', year: 'numeric',
     hour: 'numeric', minute: '2-digit', hour12: true
   })
 }
 
+// ===== TIME PARSER — handles string, ISO, Firestore Timestamp, number =====
+function parseMatchTime(startTime) {
+  if (!startTime) return null
+  if (startTime && typeof startTime.toDate === 'function') return startTime.toDate().getTime()
+  if (typeof startTime === 'number') return startTime
+  if (typeof startTime === 'string') {
+    const ts = new Date(startTime.replace(' ', 'T')).getTime()
+    if (!isNaN(ts)) return ts
+    const ts2 = new Date(startTime).getTime()
+    if (!isNaN(ts2)) return ts2
+  }
+  return null
+}
+
 // ===== MATCH PHASE DETECTION =====
 export function getMatchPhase(match) {
   if (!match.startTime) return 'unknown'
-  const start = new Date(match.startTime.replace(' ', 'T')).getTime()
+  const start = parseMatchTime(match.startTime)
+  if (!start) return 'unknown'
   const now = Date.now()
   const duration = match.gameType === 'CS' ? 15 * 60000 : 25 * 60000
   if (now < start) return 'upcoming'
@@ -75,7 +94,8 @@ export function getMatchPhase(match) {
 // Countdown milliseconds to match start
 export function getMatchCountdown(match) {
   if (!match.startTime) return 0
-  const start = new Date(match.startTime.replace(' ', 'T')).getTime()
+  const start = parseMatchTime(match.startTime)
+  if (!start) return 0
   return start - Date.now()
 }
 
@@ -304,13 +324,16 @@ export function verifyResultTotal(results, prizePool) {
 // ====================================================================
 export function canSeeRoom(match) {
   if (!match.startTime || !match.roomId) return false
-  const start = new Date(match.startTime.replace(' ', 'T')).getTime()
+  const start = parseMatchTime(match.startTime)
+  if (!start) return false
   return Date.now() >= start - 10 * 60 * 1000
 }
 
 export function getRoomUnlockCountdown(match) {
   if (!match.startTime) return null
-  const unlockAt = new Date(match.startTime.replace(' ', 'T')).getTime() - 10 * 60 * 1000
+  const start = parseMatchTime(match.startTime)
+  if (!start) return null
+  const unlockAt = start - 10 * 60 * 1000
   const diff = unlockAt - Date.now()
   if (diff <= 0) return 'UNLOCKED'
   return `Unlocks in ${formatTime(diff)}`
@@ -318,5 +341,7 @@ export function getRoomUnlockCountdown(match) {
 
 export function getRoomUnlockMs(match) {
   if (!match.startTime) return Infinity
-  return new Date(match.startTime.replace(' ', 'T')).getTime() - 10 * 60 * 1000 - Date.now()
+  const start = parseMatchTime(match.startTime)
+  if (!start) return Infinity
+  return start - 10 * 60 * 1000 - Date.now()
 }
