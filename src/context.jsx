@@ -19,81 +19,6 @@ const getTimeStr = (msOffset) => new Date(Date.now() + msOffset).toISOString().s
 const OWNER_PHONE = '+8801871035221'
 const OWNER_EMAIL = 'brintomustavi247@gmail.com'
 
-// ===== USER DATABASE — with phone, email, teamName =====
-const INITIAL_USERS = [
-  { id:'u1', username:'player1', password:'1234', role:'user', name:'ShadowKiller', ign:'SK•DRAGON', displayName:'ShadowKiller', avatar:null, balance:1250, kills:342, wins:28, matchesPlayed:95, earnings:8750, online:true, banned:false, status:'active', forcePasswordChange:false, phone:'01700000001', email:'shadow@clutcharena.bd', teamName:'', createdAt:'2025-10-15 10:00' },
-  { id:'u2', username:'player2', password:'1234', role:'user', name:'DragonBlaze', ign:'DB•FIRE', displayName:'DragonBlaze', avatar:null, balance:890, kills:278, wins:22, matchesPlayed:80, earnings:6200, online:true, banned:false, status:'active', forcePasswordChange:false, phone:'01800000002', email:'dragon@clutcharena.bd', teamName:'', createdAt:'2025-10-20 14:00' },
-  { id:'u3', username:'player3', password:'1234', role:'user', name:'NightFuryBD', ign:'NF•STORM', displayName:'NightFuryBD', avatar:null, balance:2100, kills:456, wins:22, matchesPlayed:110, earnings:12300, online:true, banned:false, status:'active', forcePasswordChange:false, phone:'01900000003', email:'nightfury@clutcharena.bd', teamName:'', createdAt:'2025-11-01 09:00' },
-  { id:'u4', username:'player4', password:'1234', role:'user', name:'StormBreaker', ign:'SB•THUNDER', displayName:'StormBreaker', avatar:null, balance:340, kills:89, wins:8, matchesPlayed:30, earnings:1800, online:false, banned:false, status:'active', forcePasswordChange:false, phone:'01600000004', email:'storm@clutcharena.bd', teamName:'', createdAt:'2025-11-05 18:00' },
-  { id:'u5', username:'player5', password:'1234', role:'user', name:'PhantomX', ign:'PX•GHOST', displayName:'PhantomX', avatar:null, balance:4500, kills:612, wins:48, matchesPlayed:150, earnings:22400, online:true, banned:false, status:'active', forcePasswordChange:false, phone:'01500000005', email:'phantom@clutcharena.bd', teamName:'', createdAt:'2025-10-10 08:00' },
-  { id:'u6', username:'player6', password:'1234', role:'user', name:'SilentWolf', ign:'SW•HUNT', displayName:'SilentWolf', avatar:null, balance:120, kills:45, wins:3, matchesPlayed:15, earnings:500, online:false, banned:false, status:'active', forcePasswordChange:false, phone:'01400000006', email:'silent@clutcharena.bd', teamName:'', createdAt:'2025-11-10 12:00' },
-  { id:'u7', username:'player7', password:'1234', role:'user', name:'BlazeKing', ign:'BK•FLAME', displayName:'BlazeKing', avatar:null, balance:780, kills:198, wins:15, matchesPlayed:55, earnings:4200, online:true, banned:false, status:'active', forcePasswordChange:false, phone:'01300000007', email:'blaze@clutcharena.bd', teamName:'', createdAt:'2025-10-25 16:00' },
-  { id:'u8', username:'player8', password:'1234', role:'user', name:'IceBreaker', ign:'IB•FROST', displayName:'IceBreaker', avatar:null, balance:3200, kills:534, wins:42, matchesPlayed:130, earnings:18700, online:false, banned:false, status:'active', forcePasswordChange:false, phone:'01700000008', email:'ice@clutcharena.bd', teamName:'', createdAt:'2025-10-12 11:00' },
-  { id:'u9', username:'banned_user', password:'1234', role:'user', name:'DarkViper', ign:'DV•VENOM', displayName:'DarkViper', avatar:null, balance:560, kills:167, wins:12, matchesPlayed:45, earnings:2900, online:true, banned:true, status:'banned', forcePasswordChange:false, phone:'01800000009', email:'viper@clutcharena.bd', teamName:'', createdAt:'2025-11-02 20:00' },
-  { id:'u10', username:'player10', password:'1234', role:'user', name:'TurboRider', ign:'TR•SPEED', displayName:'TurboRider', avatar:null, balance:1900, kills:389, wins:31, matchesPlayed:100, earnings:10500, online:true, banned:false, status:'active', forcePasswordChange:false, phone:'01900000010', email:'turbo@clutcharena.bd', teamName:'', createdAt:'2025-10-18 07:00' },
-  // ── Admin accounts ──
-  { id:'admin1', username:'admin1', password:'admin123', role:'admin', name:'Admin Rahim', displayName:'Admin Rahim', avatar:null, balance:50000, kills:0, wins:0, matchesPlayed:0, earnings:0, online:true, banned:false, status:'active', forcePasswordChange:false, phone:'01700000011', email:'admin@clutcharena.bd', teamName:'', createdAt:'2025-10-01 08:00', permissions:['matches','rooms','results','users','finance','payments'] },
-  { id:'admin2', username:'admin2', password:'admin456', role:'admin', name:'Admin Karim', displayName:'Admin Karim', avatar:null, balance:30000, kills:0, wins:0, matchesPlayed:0, earnings:0, online:false, banned:false, status:'active', forcePasswordChange:false, phone:'01800000012', email:'admin2@clutcharena.bd', teamName:'', createdAt:'2025-10-05 09:00', permissions:[] },
-  // ── Owner account ──
-  { id:'owner1', username:'owner', password:'owner123', role:'owner', name:'Owner', displayName:'Owner', avatar:null, balance:999999, kills:0, wins:0, matchesPlayed:0, earnings:0, online:true, banned:false, status:'active', forcePasswordChange:false, phone:'01900000000', email:'owner@clutcharena.bd', teamName:'', createdAt:'2025-09-01 08:00' },
-]
-
-// ===== MOCK MATCHES — with team names in results =====
-const INITIAL_MATCHES = [
-  { id:'m1', title:'Bermuda Rush Solo', mode:'Solo', map:'Bermuda', gameType:'BR', entryFee:30, maxSlots:50, joinedCount:50, perKill:10, include4th:true, include5th:true, startTime:getTimeStr(-300000), roomId:'BRS15050A', roomPassword:'br2025x', status:'live', result:null, createdAt:getTimeStr(-86400000), participants:[], image:'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80' },
-  { id:'m5', title:'Purgatory Night Squad', mode:'Squad', map:'Purgatory', gameType:'BR', entryFee:150, maxSlots:12, joinedCount:12, perKill:20, include4th:true, include5th:true, startTime:getTimeStr(-600000), roomId:'PNS12150P', roomPassword:'squad25', status:'live', result:null, createdAt:getTimeStr(-43200000), participants:[], image:'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800&q=80' },
-  { id:'m2', title:'Purgatory Duo Clash', mode:'Duo', map:'Purgatory', gameType:'BR', entryFee:40, maxSlots:25, joinedCount:18, perKill:15, include4th:false, include5th:false, startTime:getTimeStr(1500000), roomId:'', roomPassword:'', status:'upcoming', result:null, createdAt:getTimeStr(-7200000), participants:[], image:'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80' },
-  { id:'m3', title:'Kalahari Clash 4v4', mode:'Clash Squad', map:'Kalahari', gameType:'CS', entryFee:50, maxSlots:12, joinedCount:8, perKill:0, include4th:false, include5th:false, startTime:getTimeStr(5400000), roomId:'', roomPassword:'', status:'upcoming', result:null, createdAt:getTimeStr(-3600000), participants:[], image:'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80' },
-  { id:'m4', title:'Alpine Squad Showdown', mode:'Squad', map:'Alpine', gameType:'BR', entryFee:150, maxSlots:12, joinedCount:5, perKill:20, include4th:true, include5th:true, startTime:getTimeStr(10800000), roomId:'', roomPassword:'', status:'upcoming', result:null, createdAt:getTimeStr(-1800000), participants:[], image:'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80' },
-  { id:'m7', title:'Bermuda Dawn Solo', mode:'Solo', map:'Bermuda', gameType:'BR', entryFee:15, maxSlots:50, joinedCount:32, perKill:5, include4th:false, include5th:false, startTime:getTimeStr(2700000), roomId:'', roomPassword:'', status:'upcoming', result:null, createdAt:getTimeStr(-900000), participants:[], image:'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80' },
-  { id:'m6', title:'Bermuda Classic Solo', mode:'Solo', map:'Bermuda', gameType:'BR', entryFee:20, maxSlots:50, joinedCount:50, perKill:10, include4th:true, include5th:false, startTime:getTimeStr(-10800000), roomId:'BCS20500Z', roomPassword:'classic1', status:'completed', result:{ submittedAt:getTimeStr(-9000000), method:'manual', screenshotUrl:null, players:[ { position:1, ign:'DragonBlaze', kills:8, prize:150 }, { position:2, ign:'ShadowKiller', kills:6, prize:80 }, { position:3, ign:'NightFuryBD', kills:5, prize:50 }, { position:4, ign:'StormBreaker', kills:4, prize:30 }, ] }, createdAt:getTimeStr(-86400000), participants:[], image:'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80' },
-  { id:'m10', title:'Purgatory Clash Arena', mode:'Clash Squad', map:'Purgatory', gameType:'CS', entryFee:100, maxSlots:12, joinedCount:12, perKill:0, include4th:false, include5th:false, startTime:getTimeStr(-30000000), roomId:'PCA12100P', roomPassword:'clash99', status:'completed', result:{ submittedAt:getTimeStr(-27000000), method:'screenshot', screenshotUrl:null, players:[ { position:1, ign:'Alpha Squad', teamName:'Alpha Squad', kills:18, points:42, prize:600 }, { position:2, ign:'Beta Warriors', teamName:'Beta Warriors', kills:12, points:30, prize:360 }, ] }, createdAt:getTimeStr(-172800000), participants:[], image:'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80' },
-  { id:'m11', title:'Kalahari Duo Night', mode:'Duo', map:'Kalahari', gameType:'BR', entryFee:80, maxSlots:25, joinedCount:25, perKill:15, include4th:false, include5th:false, startTime:getTimeStr(-25200000), roomId:'KDN25080K', roomPassword:'dn2025', status:'completed', result:{ submittedAt:getTimeStr(-23400000), method:'manual', screenshotUrl:null, players:[ { position:1, ign:'PhantomX', teamName:'Ghost Riders', kills:9, points:25, prize:500 }, { position:2, ign:'ShadowKiller', teamName:'Dragon Duo', kills:7, points:19, prize:300 }, { position:3, ign:'BlazeKing', teamName:'Fire Hawks', kills:5, points:15, prize:180 }, ] }, createdAt:getTimeStr(-259200000), participants:[], image:'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80' },
-]
-
-const INITIAL_NOTIFICATIONS = [
-  { id:'n1', type:'room', text:'Room ID & Password unlocked for Bermuda Rush Solo — Check now!', time:getTimeStr(-1800000), read:false },
-  { id:'n2', type:'result', text:'Results out for Bermuda Classic Solo — You earned 150 TK!', time:getTimeStr(-3600000), read:false },
-  { id:'n3', type:'match', text:'Purgatory Duo Clash starts in 25 minutes. Get ready!', time:getTimeStr(-3600000), read:false },
-  { id:'n4', type:'wallet', text:'Withdrawal of 500 TK approved via bKash.', time:getTimeStr(-600000), read:true },
-  { id:'n5', type:'system', text:'Platform maintenance scheduled for tonight 2:00 AM.', time:getTimeStr(-86400000), read:true },
-  { id:'n6', type:'match', text:'Kalahari Clash 4v4 registration is now open!', time:getTimeStr(-1200000), read:true },
-]
-
-const INITIAL_TRANSACTIONS = [
-  { id:'tx1', type:'add', amount:200, desc:'Added via bKash', date:getTimeStr(-30), status:'completed' },
-  { id:'tx2', type:'join', amount:30, desc:'Joined Bermuda Rush Solo', date:getTimeStr(-60), status:'completed' },
-  { id:'tx3', type:'win', amount:150, desc:'Prize: Bermuda Classic Solo (2nd Place)', date:getTimeStr(-180), status:'completed' },
-  { id:'tx4', type:'join', amount:80, desc:'Joined Purgatory Night Duo (Team: Ghost Riders)', date:getTimeStr(-240), status:'completed' },
-  { id:'tx5', type:'add', amount:500, desc:'Added via Nagad', date:getTimeStr(-500), status:'completed' },
-  { id:'tx6', type:'withdraw', amount:500, desc:'Withdrawn to bKash', date:getTimeStr(-600), status:'completed' },
-  { id:'tx7', type:'withdraw', amount:200, desc:'Withdrawn to Nagad (Pending)', date:getTimeStr(-700), status:'pending' },
-]
-
-const INITIAL_STANDINGS = [
-  { teamName:'A4x', played:3, wins:2, kills:28, points:38 },
-  { teamName:'CN ESPORTS', played:3, wins:1, kills:25, points:30 },
-  { teamName:'NXT Official', played:3, wins:1, kills:22, points:27 },
-  { teamName:'TFG Legends', played:3, wins:1, kills:19, points:24 },
-  { teamName:'Phoenix BD', played:3, wins:0, kills:20, points:22 },
-  { teamName:'Shadow Killers', played:3, wins:0, kills:16, points:18 },
-  { teamName:'Dark Falcons', played:3, wins:0, kills:14, points:15 },
-  { teamName:'Venom Squad', played:3, wins:0, kills:11, points:12 },
-  { teamName:'Ice Breakers', played:3, wins:0, kills:8, points:8 },
-  { teamName:'Rising Stars', played:3, wins:0, kills:5, points:5 },
-]
-
-const INITIAL_ADMIN_PAYMENTS = {
-  bKash: '',
-  Nagad: '',
-  Rocket: '',
-}
-
-const INITIAL_PENDING_WITHDRAWALS = [
-  { id:'w1', userId:'u4', username:'StormBreaker', amount:200, method:'Nagad', account:'01600000004', createdAt:getTimeStr(-3600000), status:'pending' },
-  { id:'w2', userId:'u6', username:'SilentWolf', amount:100, method:'bKash', account:'01400000006', createdAt:getTimeStr(-7200000), status:'pending' },
-]
-
 function parseHash() {
   const hash = window.location.hash.slice(1) || 'login'
   const parts = hash.split('/')
@@ -105,15 +30,15 @@ const saved = loadFromLS()
 const initialState = {
   isLoggedIn: saved?.isLoggedIn || false,
   currentUser: saved?.currentUser || null,
-  users: saved?.users || INITIAL_USERS,
-  matches: saved?.matches || INITIAL_MATCHES,
-  notifications: saved?.notifications || INITIAL_NOTIFICATIONS,
-  transactions: saved?.transactions || INITIAL_TRANSACTIONS,
-  standings: saved?.standings || INITIAL_STANDINGS,
-  adminPayments: saved?.adminPayments || INITIAL_ADMIN_PAYMENTS,
-  pendingWithdrawals: saved?.pendingWithdrawals || INITIAL_PENDING_WITHDRAWALS,
+  users: [],
+  matches: [],
+  notifications: [],
+  transactions: [],
+  standings: [],
+  adminPayments: { bKash: '', Nagad: '', Rocket: '' },
+  pendingWithdrawals: [],
   pendingAddMoneyRequests: [],
-  activityLog: saved?.activityLog || [],
+  activityLog: [],
   currentView: (saved?.isLoggedIn && saved?.currentUser) ? (saved.currentUser.role === 'owner' ? 'admin-overview' : 'dashboard') : 'login',
   viewParam: null,
   matchFilter: 'all',
