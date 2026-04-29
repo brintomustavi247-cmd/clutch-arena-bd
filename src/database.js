@@ -1,23 +1,22 @@
 import { db } from './firebase';
 import { calculateELO } from './utils';
-import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, getDocs, query, where, writeBatch, orderBy } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, getDocs, addDoc, query, where, writeBatch, orderBy, limit } from 'firebase/firestore';
+
 // ══════════════════════════════════════
 //  SECURITY: SANITIZATION & SAFE IDS
 // ══════════════════════════════════════
 function sanitize(str) {
   if (typeof str !== 'string') return str;
-  // Prevents XSS if data is ever rendered outside React (emails, PDFs)
   return str.replace(/[<>"'&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '&': '&amp;' })[c]).trim().slice(0, 100);
 }
 
 function safeTxId(prefix) {
-  // Prevents TX ID collisions if two actions happen in the same millisecond
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
+
 // ══════════════════════════════════════
 //  USER DOCUMENTS
 // ══════════════════════════════════════
-
 
 export async function fetchUser(uid) {
   const userRef = doc(db, 'users', uid);
@@ -30,10 +29,34 @@ export async function createUser(uid, data) {
   const userRef = doc(db, 'users', uid);
   await setDoc(userRef, {
     ...data,
-    ign: sanitize(data.ign), // Force sanitize IGN
-    displayName: sanitize(data.displayName), // Force sanitize Name
-    balance: 0, kills: 0, wins: 0, matchesPlayed: 0, earnings: 0, elo: 1000,
-    banned: false, status: 'active', createdAt: new Date().toISOString()
+    ign: sanitize(data.ign),
+    displayName: sanitize(data.displayName),
+    balance: 0,
+    kills: 0,
+    wins: 0,
+    matchesPlayed: 0,
+    earnings: 0,
+    elo: 1000,
+    banned: false,
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    // ═══ GAMIFICATION FIELDS (v4.0) ═══
+    streak: 1,
+    streakLastDate: new Date().toISOString().split('T')[0],
+    level: 1,
+    xp: 0,
+    nextLevelXP: 100,
+    rank: 'Unranked',
+    dailyClaimed: false,
+    totalMatchesPlayed: 0,
+    totalWins: 0,
+    totalKills: 0,
+    totalEarnings: 0,
+    achievements: [],
+    referralCode: uid.slice(0, 8).toUpperCase(),
+    referredBy: null,
+    referralCount: 0,
+    referralEarnings: 0,
   });
 }
 
@@ -117,14 +140,44 @@ export async function saveSettings(data) {
 }
 
 // ══════════════════════════════════════
-//  ADD MONEY REQUESTS (Pending Approval)
+//  ADD MONEY REQUESTS (v4.0)
 // ══════════════════════════════════════
+
+export async function createAddMoneyRequest(data) {
+  const reqRef = doc(db, 'addMoneyRequests', data.id);
+  await setDoc(reqRef, {
+    ...data,
+    txId: (data.txId || '').trim().toUpperCase(),
+    senderNumber: sanitize(data.senderNumber || ''),
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  });
+}
+
+export async function fetchPendingAddMoneyRequests() {
+  const col = collection(db, 'addMoneyRequests');
+  const q = query(col, where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export function subscribeToAddMoneyRequests(onUpdate) {
+  const col = collection(db, 'addMoneyRequests');
+  const q = query(col, where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
+  const unsubscribe = onSnapshot(q, (snap) => {
+    const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    onUpdate(results);
+  }, (error) => {
+    console.error('[DB] Add money requests subscription error:', error);
+    onUpdate([]);
+  });
+  return unsubscribe;
+}
 
 export async function approveAddMoneyRequest(requestId, userId, amount) {
   const reqRef = doc(db, 'addMoneyRequests', requestId);
   await updateDoc(reqRef, { status: 'approved', processedAt: new Date().toISOString() });
 
-  // 🛠️ FIX: Update the user's transaction history so it changes from "Pending" to "Completed"
   const txRef = doc(db, 'transactions', requestId);
   await updateDoc(txRef, { status: 'completed' }).catch(() => {
     console.warn('[DB] Transaction doc not found for approval, skipping update.');
@@ -138,18 +191,57 @@ export async function approveAddMoneyRequest(requestId, userId, amount) {
   }
 }
 
-export async function rejectAddMoneyRequest(requestId) {
+export async function rejectAddMoneyRequest(requestId, userId) {
   const reqRef = doc(db, 'addMoneyRequests', requestId);
   await updateDoc(reqRef, { status: 'rejected', processedAt: new Date().toISOString() });
 
-  // 🛠️ FIX: Update the user's transaction history so it changes from "Pending" to "Rejected"
   const txRef = doc(db, 'transactions', requestId);
   await updateDoc(txRef, { status: 'rejected' }).catch(() => {
     console.warn('[DB] Transaction doc not found for rejection, skipping update.');
   });
+
+  if (userId) {
+    await addNotification(userId, {
+      type: 'deposit_rejected',
+      title: 'Deposit Rejected',
+      body: 'Your deposit request was rejected. Please try again with correct information.'
+    });
+  }
 }
+
 // ══════════════════════════════════════
-//  PHASE 1: PRIZE DISTRIBUTION (1.1 + 1.2) + ELO ENGINE
+//  NOTIFICATIONS (v4.0)
+// ══════════════════════════════════════
+
+export async function addNotification(userId, notification) {
+  const notifRef = doc(collection(db, 'users', userId, 'notifications'));
+  await setDoc(notifRef, {
+    ...notification,
+    read: false,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+export function subscribeToNotifications(userId, onUpdate) {
+  const notifCol = collection(db, 'users', userId, 'notifications');
+  const q = query(notifCol, orderBy('createdAt', 'desc'), limit(50));
+  const unsubscribe = onSnapshot(q, (snap) => {
+    const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    onUpdate(results);
+  }, (error) => {
+    console.error('[DB] Notifications subscription error:', error);
+    onUpdate([]);
+  });
+  return unsubscribe;
+}
+
+export async function markNotificationRead(userId, notifId) {
+  const notifRef = doc(db, 'users', userId, 'notifications', notifId);
+  await updateDoc(notifRef, { read: true });
+}
+
+// ══════════════════════════════════════
+//  PRIZE DISTRIBUTION + ELO + GAMIFICATION (v4.0)
 // ══════════════════════════════════════
 
 export async function distributePrizes(matchId, matchData, resultPlayers, perKill) {
@@ -161,26 +253,25 @@ export async function distributePrizes(matchId, matchData, resultPlayers, perKil
   const userMap = {};
 
   if (ignList.length > 0) {
-      const users = await fetchUsersByIGNs(ignList);
+    const users = await fetchUsersByIGNs(ignList);
     users.forEach(u => {
       userMap[(u.ign || '').toLowerCase()] = u;
     });
   }
 
-  // Pre-calculate average ELO of all registered players in this match
   const allPlayerElos = resultPlayers.map(p => userMap[(p.ign || '').trim().toLowerCase()]?.elo || 1000);
   const avgMatchElo = allPlayerElos.length > 0 ? (allPlayerElos.reduce((a, b) => a + b, 0) / allPlayerElos.length) : 1000;
 
   const batch = writeBatch(db);
   let totalDistributed = 0;
 
-  resultPlayers.forEach(player => {
+  for (const player of resultPlayers) {
     const positionPrize = Number(player.prize) || Number(player.positionPrize) || 0;
     const kills = Number(player.kills) || 0;
     const killPrize = pk * kills;
     const totalPrize = positionPrize + killPrize;
 
-    if (totalPrize <= 0) return;
+    if (totalPrize <= 0) continue;
 
     totalDistributed += totalPrize;
 
@@ -197,25 +288,51 @@ export async function distributePrizes(matchId, matchData, resultPlayers, perKil
         amount: totalPrize,
         desc: `Prize: ${sanitize(matchData.title)} (#${player.position}) — UNCLAIMED (User not registered)`,
         matchId: matchId,
-        date: now, status: 'completed',
-        position: player.position, kills: kills,
-        positionPrize: positionPrize, killPrize: killPrize,
+        date: now,
+        status: 'completed',
+        position: player.position,
+        kills: kills,
+        positionPrize: positionPrize,
+        killPrize: killPrize,
       });
-      return;
+      continue;
     }
 
     const currentBalance = user.balance || 0;
     const currentElo = user.elo || 1000;
-    
-    // ELO Calculation
     const eloChange = calculateELO(currentElo, avgMatchElo, player.position, resultPlayers.length);
     const newElo = currentElo + eloChange;
+
+    // ═══ GAMIFICATION: Update stats ═══
+    const newTotalKills = (user.totalKills || 0) + kills;
+    const newTotalWins = (user.totalWins || 0) + (player.position === 1 ? 1 : 0);
+    const newTotalEarnings = (user.totalEarnings || 0) + totalPrize;
+    const newMatchesPlayed = (user.totalMatchesPlayed || 0) + 1;
+
+    // Check achievements to unlock
+    const newAchievements = [...(user.achievements || [])];
+    const checkAch = (id, condition) => {
+      if (condition && !newAchievements.includes(id)) newAchievements.push(id);
+    };
+    checkAch('first_match', newMatchesPlayed >= 1);
+    checkAch('first_win', newTotalWins >= 1);
+    checkAch('kill_10', newTotalKills >= 10);
+    checkAch('kill_50', newTotalKills >= 50);
+    checkAch('kill_100', newTotalKills >= 100);
+    checkAch('win_5', newTotalWins >= 5);
+    checkAch('win_10', newTotalWins >= 10);
 
     batch.update(doc(db, 'users', user.id), {
       balance: currentBalance + totalPrize,
       wins: (user.wins || 0) + (player.position === 1 ? 1 : 0),
       earnings: (user.earnings || 0) + totalPrize,
-      elo: newElo, // <--- SAVES ELO TO FIRESTORE
+      elo: newElo,
+      // Gamification
+      totalMatchesPlayed: newMatchesPlayed,
+      totalKills: newTotalKills,
+      totalWins: newTotalWins,
+      totalEarnings: newTotalEarnings,
+      achievements: newAchievements,
     });
 
     const txId = safeTxId('tx_win');
@@ -229,16 +346,23 @@ export async function distributePrizes(matchId, matchData, resultPlayers, perKil
     desc += ` [ELO ${eloChange >= 0 ? '+' : ''}${eloChange}]`;
 
     batch.set(doc(db, 'transactions', txId), {
-      id: txId, userId: user.id,
+      id: txId,
+      userId: user.id,
       username: user.name || user.displayName || user.ign,
       ign: user.ign || '',
-      type: 'win', amount: totalPrize, desc: desc,
-      matchId: matchId, date: now, status: 'completed',
-      position: player.position, kills: kills,
-      positionPrize: positionPrize, killPrize: killPrize,
+      type: 'win',
+      amount: totalPrize,
+      desc: desc,
+      matchId: matchId,
+      date: now,
+      status: 'completed',
+      position: player.position,
+      kills: kills,
+      positionPrize: positionPrize,
+      killPrize: killPrize,
       eloChange: eloChange,
     });
-  });
+  }
 
   batch.update(matchRef, {
     result: { submittedAt: now, players: resultPlayers },
@@ -251,7 +375,7 @@ export async function distributePrizes(matchId, matchData, resultPlayers, perKil
 }
 
 // ══════════════════════════════════════
-//  PHASE 1: MATCH CANCELLATION + REFUND (1.4)
+//  MATCH CANCELLATION + REFUND
 // ══════════════════════════════════════
 
 export async function cancelMatchAndRefund(matchId, matchData, adminName) {
@@ -279,18 +403,25 @@ export async function cancelMatchAndRefund(matchId, matchData, adminName) {
 
     const txId = safeTxId('tx_refund');
     batch.set(doc(db, 'transactions', txId), {
-      id: txId, userId: user.id,
+      id: txId,
+      userId: user.id,
       username: user.name || user.displayName || 'Unknown',
       ign: user.ign || '',
-      type: 'refund', amount: entryFee,
+      type: 'refund',
+      amount: entryFee,
       desc: `Refund: ${sanitize(matchData.title)} (Match cancelled by ${sanitize(adminName) || 'Admin'})`,
-      matchId: matchId, date: now, status: 'completed',
+      matchId: matchId,
+      date: now,
+      status: 'completed',
     });
   }
 
   batch.update(matchRef, {
-    status: 'cancelled', cancelledAt: now, cancelledBy: adminName || 'Admin',
-    refundCount: refundCount, refundTotal: refundedTotal,
+    status: 'cancelled',
+    cancelledAt: now,
+    cancelledBy: adminName || 'Admin',
+    refundCount: refundCount,
+    refundTotal: refundedTotal,
   });
 
   await batch.commit();
@@ -299,7 +430,7 @@ export async function cancelMatchAndRefund(matchId, matchData, adminName) {
 }
 
 // ══════════════════════════════════════
-//  PHASE 1: DUPLICATE TXID CHECK (1.7)
+//  DUPLICATE TXID CHECK
 // ══════════════════════════════════════
 
 export async function checkDuplicateTXID(txId) {
@@ -311,7 +442,7 @@ export async function checkDuplicateTXID(txId) {
 }
 
 // ══════════════════════════════════════
-//  PHASE 1: ADMIN BALANCE ADJUST + TX LOG (1.9 + 1.10)
+//  ADMIN BALANCE ADJUST + TX LOG
 // ══════════════════════════════════════
 
 export async function adminAdjustBalance(userId, amount, reason, adminName) {
@@ -327,31 +458,30 @@ export async function adminAdjustBalance(userId, amount, reason, adminName) {
 
   const txId = safeTxId('tx_admin');
   await setDoc(doc(db, 'transactions', txId), {
-    id: txId, userId: userId,
+    id: txId,
+    userId: userId,
     username: userData.name || userData.displayName || 'Unknown',
     ign: userData.ign || '',
     type: amount >= 0 ? 'admin_add' : 'admin_deduct',
     amount: Math.abs(amount),
     desc: `Admin ${sanitize(admin)}: ${sanitize(reason) || 'Balance adjustment'} (${amount >= 0 ? 'Added' : 'Deducted'})`,
-    date: now, status: 'completed', adminName: admin,
+    date: now,
+    status: 'completed',
+    adminName: admin,
   });
 
   return Math.max(0, (userData.balance || 0) + amount);
 }
 
 // ══════════════════════════════════════
-//  PHASE 2: MULTI-DEVICE SYNC
+//  MULTI-DEVICE SYNC
 // ══════════════════════════════════════
 
-// ⚠️ WARNING: Read-Modify-Write race condition. If 2 users click "Join" at the exact 
-// same millisecond, one join will be overwritten. MUST be moved to a Cloud Function in Phase 6.3.
 export async function addJoinToMatch(matchId, joinEntry) {
   const matchRef = doc(db, 'matches', matchId);
   const matchSnap = await getDoc(matchRef);
   if (!matchSnap.exists()) return;
   const existing = matchSnap.data().joined || [];
-  
-  // Sanitize team name before saving
   const safeEntry = { ...joinEntry, teamName: sanitize(joinEntry.teamName) };
 
   await updateDoc(matchRef, {
@@ -386,7 +516,7 @@ export function subscribeToMatches(onUpdate) {
 }
 
 // ══════════════════════════════════════
-//  PHASE 3: REAL-TIME LISTENERS
+//  REAL-TIME LISTENERS
 // ══════════════════════════════════════
 
 export function subscribeToSettings(onUpdate) {
@@ -416,63 +546,72 @@ export function subscribeToWithdrawals(onUpdate) {
 }
 
 export async function approveWithdrawalInCloud(wdId, userId, amount) {
-  const now = new Date().toISOString()
-  const wdRef = doc(db, 'withdrawals', wdId)
-  await updateDoc(wdRef, { status: 'approved', processedAt: now })
-const txId = safeTxId('tx_wd_ok')
+  const now = new Date().toISOString();
+  const wdRef = doc(db, 'withdrawals', wdId);
+  await updateDoc(wdRef, { status: 'approved', processedAt: now });
 
-
+  const txId = safeTxId('tx_wd_ok');
   await setDoc(doc(db, 'transactions', txId), {
-    id: txId, userId, amount,
-    type: 'withdraw', status: 'completed',
+    id: txId,
+    userId,
+    amount,
+    type: 'withdraw',
+    status: 'completed',
     desc: `Withdrawal of ${amount} TK approved and processed`,
-    date: now, createdAt: now,
-  })
+    date: now,
+    createdAt: now,
+  });
 }
 
 export async function rejectWithdrawalInCloud(wdId, userId, amount) {
-  const now = new Date().toISOString()
-  const wdRef = doc(db, 'withdrawals', wdId)
-  await updateDoc(wdRef, { status: 'rejected', processedAt: now })
-  const userRef = doc(db, 'users', userId)
-  const userSnap = await getDoc(userRef)
+  const now = new Date().toISOString();
+  const wdRef = doc(db, 'withdrawals', wdId);
+  await updateDoc(wdRef, { status: 'rejected', processedAt: now });
+
+  const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
   if (userSnap.exists()) {
-    const userData = userSnap.data()
-    await updateDoc(userRef, { balance: (userData.balance || 0) + amount })
+    const userData = userSnap.data();
+    await updateDoc(userRef, { balance: (userData.balance || 0) + amount });
   }
-const txId = safeTxId('tx_wd_rj')
+
+  const txId = safeTxId('tx_wd_rj');
   await setDoc(doc(db, 'transactions', txId), {
-    id: txId, userId, amount,
-    type: 'refund', status: 'completed',
+    id: txId,
+    userId,
+    amount,
+    type: 'refund',
+    status: 'completed',
     desc: `Withdrawal of ${amount} TK rejected — Amount refunded to balance`,
-    date: now, createdAt: now,
-  })
+    date: now,
+    createdAt: now,
+  });
 }
 
 export function subscribeToAllUsers(onUpdate) {
-  const usersCol = collection(db, 'users')
-  const q = query(usersCol, orderBy('earnings', 'desc'))
+  const usersCol = collection(db, 'users');
+  const q = query(usersCol, orderBy('earnings', 'desc'));
   const unsubscribe = onSnapshot(q, (snap) => {
-    const results = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-    onUpdate(results)
-  })
-  return unsubscribe
+    const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    onUpdate(results);
+  });
+  return unsubscribe;
 }
 
 export function subscribeToUserTransactions(uid, onUpdate) {
-  const txCol = collection(db, 'transactions')
-  const q = query(txCol, where('userId', '==', uid))
+  const txCol = collection(db, 'transactions');
+  const q = query(txCol, where('userId', '==', uid));
   const unsubscribe = onSnapshot(q, (snap) => {
-    const results = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     results.sort((a, b) => {
-      const dateA = new Date(a.date || 0).getTime()
-      const dateB = new Date(b.date || 0).getTime()
-      return dateB - dateA
-    })
-    onUpdate(results)
+      const dateA = new Date(a.date || 0).getTime();
+      const dateB = new Date(b.date || 0).getTime();
+      return dateB - dateA;
+    });
+    onUpdate(results);
   }, (error) => {
-    console.error('[DB] Transaction subscription error:', error)
-    onUpdate([])
-  })
-  return unsubscribe
+    console.error('[DB] Transaction subscription error:', error);
+    onUpdate([]);
+  });
+  return unsubscribe;
 }
