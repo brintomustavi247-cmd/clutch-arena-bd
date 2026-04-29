@@ -120,27 +120,15 @@ export async function saveSettings(data) {
 //  ADD MONEY REQUESTS (Pending Approval)
 // ══════════════════════════════════════
 
-export async function createAddMoneyRequest(requestData) {
-  const reqRef = doc(db, 'addMoneyRequests', requestData.id);
-  await setDoc(reqRef, requestData);
-}
-
-export async function fetchPendingAddMoneyRequests() {
-  const col = collection(db, 'addMoneyRequests');
-  const q = query(col, where('status', '==', 'pending'));
-  const snap = await getDocs(q);
-  const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  results.sort((a, b) => {
-    const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return tB - tA;
-  });
-  return results;
-}
-
 export async function approveAddMoneyRequest(requestId, userId, amount) {
   const reqRef = doc(db, 'addMoneyRequests', requestId);
   await updateDoc(reqRef, { status: 'approved', processedAt: new Date().toISOString() });
+
+  // 🛠️ FIX: Update the user's transaction history so it changes from "Pending" to "Completed"
+  const txRef = doc(db, 'transactions', requestId);
+  await updateDoc(txRef, { status: 'completed' }).catch(() => {
+    console.warn('[DB] Transaction doc not found for approval, skipping update.');
+  });
 
   const userRef = doc(db, 'users', userId);
   const userSnap = await getDoc(userRef);
@@ -153,8 +141,13 @@ export async function approveAddMoneyRequest(requestId, userId, amount) {
 export async function rejectAddMoneyRequest(requestId) {
   const reqRef = doc(db, 'addMoneyRequests', requestId);
   await updateDoc(reqRef, { status: 'rejected', processedAt: new Date().toISOString() });
-}
 
+  // 🛠️ FIX: Update the user's transaction history so it changes from "Pending" to "Rejected"
+  const txRef = doc(db, 'transactions', requestId);
+  await updateDoc(txRef, { status: 'rejected' }).catch(() => {
+    console.warn('[DB] Transaction doc not found for rejection, skipping update.');
+  });
+}
 // ══════════════════════════════════════
 //  PHASE 1: PRIZE DISTRIBUTION (1.1 + 1.2) + ELO ENGINE
 // ══════════════════════════════════════
