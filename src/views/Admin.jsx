@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useApp } from '../context'
 import { formatTK, formatTKShort, calculateMatchEconomics, calculateResultPrize, calculateAllResultPrizes, getRoomUnlockCountdown, maxSlotsForMode, showToast } from '../utils'
-import { approveAddMoneyRequest, rejectAddMoneyRequest } from '../db'
+import { approveAddMoneyRequest, rejectAddMoneyRequest } from "../database"
 import { FF_MAPS, FF_MODES, FF_GAME_TYPES, KILL_REWARDS, RESULT_METHODS } from '../data'
 
 // ★ Inline fallback — remove this after updating utils.js
