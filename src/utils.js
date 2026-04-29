@@ -384,3 +384,42 @@ export function getTierProgress(elo) {
   const range = tier.max - tier.min
   return Math.min(100, Math.round((progress / range) * 100))
 }
+// ─── ELO ENGINE ──────────────────────────────────────────
+
+export function calculateELO(playerElo, avgOpponentElo, placement, totalPlayers) {
+  const K = 32
+  const expectedScore = 1 / (1 + Math.pow(10, (avgOpponentElo - playerElo) / 400))
+  // Battle Royale format: 1st place = 1.0, last place = 0.0
+  const actualScore = (totalPlayers - placement) / (totalPlayers - 1)
+  return Math.round(K * (actualScore - expectedScore))
+}
+
+const TIERS = [
+  { name: 'Bronze',      min: 0,    max: 1199, color: '#CD7F32', icon: '🥉' },
+  { name: 'Silver',      min: 1200, max: 1399, color: '#C0C0C0', icon: '🎖️' },
+  { name: 'Gold',        min: 1400, max: 1599, color: '#FFD700', icon: '🥇' },
+  { name: 'Platinum',    min: 1600, max: 1799, color: '#61CDFF', icon: '💠' },
+  { name: 'Diamond',     min: 1800, max: 1999, color: '#B9F2FF', icon: '💎' },
+  { name: 'Heroic',      min: 2000, max: 2199, color: '#A78BFA', icon: '🦸' },
+  { name: 'Grandmaster', min: 2200, max: 9999, color: '#FF6B6B', icon: '👑' },
+]
+
+export function getEloTier(elo) {
+  return TIERS.find(t => elo >= t.min && elo <= t.max) || TIERS[0]
+}
+
+export function getTierProgress(elo) {
+  const tier = getEloTier(elo)
+  if (tier.max === 9999) return 100
+  const range = tier.max - tier.min + 1
+  const progress = elo - tier.min
+  return Math.min(100, Math.round((progress / range) * 100))
+}
+
+export function formatTKShort(amount) {
+  if (amount == null || isNaN(amount)) return '৳0'
+  const num = Number(amount)
+  if (num >= 100000) return '৳' + (num / 100000).toFixed(1) + 'L'
+  if (num >= 1000) return '৳' + (num / 1000).toFixed(1) + 'K'
+  return '৳' + num
+}

@@ -1,23 +1,28 @@
 import { useState } from 'react'
 import { useApp } from '../context'
-import { formatTK } from '../utils'
+import { formatTK, getEloTier } from '../utils'
 
 export default function Leaderboard() {
   const { state } = useApp()
   const { users, currentUser } = state
-  const [tab, setTab] = useState('earnings')
+  const [tab, setTab] = useState('elo') // DEFAULT IS NOW ELO
 
   if (!currentUser) return null
 
   const activeUsers = users.filter(u => u.ign && !u.banned && u.role !== 'owner' && u.role !== 'admin')
 
   const sortedPlayers = (() => {
+    if (tab === 'elo') return [...activeUsers].sort((a, b) => (b.elo || 1000) - (a.elo || 1000))
     if (tab === 'wins') return [...activeUsers].sort((a, b) => (b.wins || 0) - (a.wins || 0))
     if (tab === 'kills') return [...activeUsers].sort((a, b) => (b.kills || 0) - (a.kills || 0))
     return [...activeUsers].sort((a, b) => (b.earnings || 0) - (a.earnings || 0))
   })()
 
   const getValue = (u) => {
+    if (tab === 'elo') {
+      const tier = getEloTier(u.elo || 1000)
+      return `${tier.icon} ${u.elo || 1000}`
+    }
     if (tab === 'wins') return `${u.wins || 0} W`
     if (tab === 'kills') return `${u.kills || 0} K`
     return formatTK(u.earnings || 0)
@@ -26,6 +31,7 @@ export default function Leaderboard() {
   const podiumPlayers = sortedPlayers.slice(0, 3).map(u => ({
     ...u,
     xp: getValue(u),
+    tier: getEloTier(u.elo || 1000),
   }))
 
   const hasPodium = podiumPlayers.length === 3
@@ -36,9 +42,9 @@ export default function Leaderboard() {
 
   const initial = (name) => name ? name[0].toUpperCase() : '?'
 
-  const AvatarCircle = ({ name, size = 32, rank }) => {
+  const AvatarCircle = ({ name, size = 32, rank, tierColor }) => {
     const colors = { 1: '#facc15', 2: '#cccccc', 3: '#cd7f32' }
-    const c = colors[rank] || '#2a2a2c'
+    const c = tierColor || colors[rank] || '#2a2a2c'
     return (
       <div style={{
         width: size, height: size, borderRadius: '50%',
@@ -53,6 +59,8 @@ export default function Leaderboard() {
       </div>
     )
   }
+
+  const podiumColors = { 1: podiumPlayers[0]?.tier?.color || '#facc15', 2: podiumPlayers[1]?.tier?.color || '#cccccc', 3: podiumPlayers[2]?.tier?.color || '#cd7f32' }
 
   return (
     <div style={{ padding: '0 0 100px 0', overflowX: 'hidden' }}>
@@ -70,7 +78,7 @@ export default function Leaderboard() {
           fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13,
           color: '#889299', margin: 0, fontWeight: 500,
         }}>
-          Compete in matches to climb the leaderboard and win rewards.
+          Compete in matches to climb the ranks and earn rewards.
         </p>
       </div>
 
@@ -81,6 +89,7 @@ export default function Leaderboard() {
         marginBottom: 40, width: 'fit-content',
       }}>
         {[
+          { key: 'elo', label: '⭐ ELO Rank' },
           { key: 'earnings', label: 'Earnings' },
           { key: 'wins', label: 'Wins' },
           { key: 'kills', label: 'Kills' },
@@ -91,8 +100,8 @@ export default function Leaderboard() {
               key={t.key}
               onClick={() => setTab(t.key)}
               style={{
-                padding: '8px 24px', borderRadius: 8, border: 'none',
-                fontFamily: "'Lexend', sans-serif", fontSize: 13, fontWeight: 600,
+                padding: '8px 20px', borderRadius: 8, border: 'none',
+                fontFamily: "'Lexend', sans-serif", fontSize: 12, fontWeight: 600,
                 color: active ? '#005572' : '#889299',
                 background: active ? '#61cdff' : 'transparent',
                 cursor: 'pointer',
@@ -117,7 +126,7 @@ export default function Leaderboard() {
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           width: '28%', maxWidth: 160,
         }}>
-          <AvatarCircle name={podiumPlayers[1]?.name} size={56} rank={2} />
+          <AvatarCircle name={podiumPlayers[1]?.name} size={56} rank={2} tierColor={podiumColors[2]} />
           <div style={{ textAlign: 'center', marginBottom: 10 }}>
             <div style={{
               fontFamily: "'Lexend', sans-serif", fontSize: 14, fontWeight: 700,
@@ -127,24 +136,24 @@ export default function Leaderboard() {
               {podiumPlayers[1]?.name}
             </div>
             <div style={{
-              fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: '#cccccc', marginTop: 2,
+              fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: podiumColors[2], marginTop: 2,
             }}>
-              {podiumPlayers[1]?.xp} XP
+              {podiumPlayers[1]?.xp}
             </div>
           </div>
           <div style={{
             width: '100%', height: 120,
             background: '#2a2a2c', borderRadius: '12px 12px 0 0',
-            borderTop: '3px solid #cccccc',
+            borderTop: `3px solid ${podiumColors[2]}`,
             display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 16,
             position: 'relative', overflow: 'hidden',
           }}>
             <div style={{
               position: 'absolute', inset: 0,
-              background: 'linear-gradient(to bottom, rgba(204,204,204,0.08), transparent)',
+              background: `linear-gradient(to bottom, ${podiumColors[2]}15, transparent)`,
             }} />
             <span style={{
-              fontFamily: "'Lexend', sans-serif", fontSize: 28, fontWeight: 700, color: '#cccccc',
+              fontFamily: "'Lexend', sans-serif", fontSize: 28, fontWeight: 700, color: podiumColors[2],
             }}>2</span>
           </div>
         </div>
@@ -154,10 +163,10 @@ export default function Leaderboard() {
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           width: '32%', maxWidth: 180, position: 'relative', zIndex: 2,
         }}>
-          <div style={{ marginBottom: 8, color: '#facc15' }}>
+          <div style={{ marginBottom: 8, color: podiumColors[1] }}>
             <i className="fa-solid fa-crown" style={{ fontSize: 28 }} />
           </div>
-          <AvatarCircle name={podiumPlayers[0]?.name} size={72} rank={1} />
+          <AvatarCircle name={podiumPlayers[0]?.name} size={72} rank={1} tierColor={podiumColors[1]} />
           <div style={{ textAlign: 'center', marginBottom: 10 }}>
             <div style={{
               fontFamily: "'Lexend', sans-serif", fontSize: 16, fontWeight: 700,
@@ -167,24 +176,24 @@ export default function Leaderboard() {
               {podiumPlayers[0]?.name}
             </div>
             <div style={{
-              fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, color: '#facc15', marginTop: 2,
+              fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, color: podiumColors[1], marginTop: 2,
             }}>
-              {podiumPlayers[0]?.xp} XP
+              {podiumPlayers[0]?.xp}
             </div>
           </div>
           <div style={{
             width: '100%', height: 160,
             background: '#2a2a2c', borderRadius: '12px 12px 0 0',
-            borderTop: '4px solid #facc15',
+            borderTop: `4px solid ${podiumColors[1]}`,
             display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 16,
             position: 'relative', overflow: 'hidden',
           }}>
             <div style={{
               position: 'absolute', inset: 0,
-              background: 'linear-gradient(to bottom, rgba(250,204,21,0.1), transparent)',
+              background: `linear-gradient(to bottom, ${podiumColors[1]}20, transparent)`,
             }} />
             <span style={{
-              fontFamily: "'Lexend', sans-serif", fontSize: 36, fontWeight: 700, color: '#facc15',
+              fontFamily: "'Lexend', sans-serif", fontSize: 36, fontWeight: 700, color: podiumColors[1],
             }}>1</span>
           </div>
         </div>
@@ -194,7 +203,7 @@ export default function Leaderboard() {
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           width: '28%', maxWidth: 160,
         }}>
-          <AvatarCircle name={podiumPlayers[2]?.name} size={56} rank={3} />
+          <AvatarCircle name={podiumPlayers[2]?.name} size={56} rank={3} tierColor={podiumColors[3]} />
           <div style={{ textAlign: 'center', marginBottom: 10 }}>
             <div style={{
               fontFamily: "'Lexend', sans-serif", fontSize: 14, fontWeight: 700,
@@ -204,24 +213,24 @@ export default function Leaderboard() {
               {podiumPlayers[2]?.name}
             </div>
             <div style={{
-              fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: '#cd7f32', marginTop: 2,
+              fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: podiumColors[3], marginTop: 2,
             }}>
-              {podiumPlayers[2]?.xp} XP
+              {podiumPlayers[2]?.xp}
             </div>
           </div>
           <div style={{
             width: '100%', height: 80,
             background: '#2a2a2c', borderRadius: '12px 12px 0 0',
-            borderTop: '3px solid #cd7f32',
+            borderTop: `3px solid ${podiumColors[3]}`,
             display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 14,
             position: 'relative', overflow: 'hidden',
           }}>
             <div style={{
               position: 'absolute', inset: 0,
-              background: 'linear-gradient(to bottom, rgba(205,127,50,0.06), transparent)',
+              background: `linear-gradient(to bottom, ${podiumColors[3]}10, transparent)`,
             }} />
             <span style={{
-              fontFamily: "'Lexend', sans-serif", fontSize: 28, fontWeight: 700, color: '#cd7f32',
+              fontFamily: "'Lexend', sans-serif", fontSize: 28, fontWeight: 700, color: podiumColors[3],
             }}>3</span>
           </div>
         </div>
@@ -237,7 +246,7 @@ export default function Leaderboard() {
         {/* Header */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '36px 1fr 60px 58px 48px',
+          gridTemplateColumns: '36px 1fr 60px 58px 70px',
           gap: 4, padding: '12px 16px',
           borderBottom: '1px solid rgba(255,255,255,0.05)',
           background: '#1c1b1d',
@@ -257,11 +266,12 @@ export default function Leaderboard() {
           const isMe = item.id === currentUser.id
           const matchesPlayed = item.matchesPlayed || 0
           const winRate = matchesPlayed > 0 ? Math.round(((item.wins || 0) / matchesPlayed) * 100) : 0
+          const itemTier = getEloTier(item.elo || 1000)
 
           return (
             <div key={item.id || item.teamName} style={{
               display: 'grid',
-              gridTemplateColumns: '36px 1fr 60px 58px 48px',
+              gridTemplateColumns: '36px 1fr 60px 58px 70px',
               gap: 4, padding: '12px 16px', alignItems: 'center',
               borderBottom: idx < restList.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none',
               background: isMe ? 'rgba(97,205,255,0.05)' : 'transparent',
@@ -322,13 +332,13 @@ export default function Leaderboard() {
                 {winRate}%
               </div>
 
-              {/* Score */}
+              {/* Score / ELO */}
               <div style={{
                 textAlign: 'center',
                 fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 700,
-                color: isMe ? '#61cdff' : '#e5e1e4',
+                color: tab === 'elo' ? itemTier.color : (isMe ? '#61cdff' : '#e5e1e4'),
               }}>
-                {tab === 'earnings' ? formatTK(item.earnings || 0) : tab === 'wins' ? `${item.wins || 0}` : `${item.kills || 0}`}
+                {tab === 'elo' ? `${itemTier.icon} ${item.elo || 1000}` : tab === 'earnings' ? formatTK(item.earnings || 0) : tab === 'wins' ? `${item.wins || 0}` : `${item.kills || 0}`}
               </div>
             </div>
           )
@@ -383,16 +393,6 @@ export default function Leaderboard() {
           </p>
         </div>
       )}
-
-      {/* ═══ LOAD MORE ═══ */}
-      <div style={{ textAlign: 'center', padding: '12px 0' }}>
-        <span style={{
-          fontFamily: "'Lexend', sans-serif", fontSize: 14, fontWeight: 600, color: '#61cdff', cursor: 'pointer',
-          WebkitTapHighlightColor: 'transparent',
-        }}>
-          Load More
-        </span>
-      </div>
     </div>
   )
 }
