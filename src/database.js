@@ -3,7 +3,7 @@ import { calculateELO } from './utils';
 import {
   doc, getDoc, setDoc, updateDoc, onSnapshot,
   collection, getDocs, addDoc, query, where,
-  writeBatch, orderBy, limit, Timestamp
+  writeBatch, orderBy, limit
 } from 'firebase/firestore';
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -19,7 +19,7 @@ function safeTxId(prefix) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  DATE HELPERS (for profit calculations)
+//  DATE HELPERS
 // ═══════════════════════════════════════════════════════════════════════
 function getTodayStr() {
   return new Date().toISOString().split('T')[0];
@@ -61,7 +61,7 @@ export async function createUser(uid, data) {
     ign: sanitize(data.ign),
     displayName: sanitize(data.displayName),
     balance: 0,
-    lockedBalance: 0,              // ═══ v5.0: Referral bonus (can join, can't withdraw)
+    lockedBalance: 0,
     kills: 0,
     wins: 0,
     matchesPlayed: 0,
@@ -70,7 +70,6 @@ export async function createUser(uid, data) {
     banned: false,
     status: 'active',
     createdAt: new Date().toISOString(),
-    // ═══ GAMIFICATION FIELDS (v4.0) ═══
     streak: 1,
     streakLastDate: new Date().toISOString().split('T')[0],
     level: 1,
@@ -83,15 +82,12 @@ export async function createUser(uid, data) {
     totalKills: 0,
     totalEarnings: 0,
     achievements: [],
-    // ═══ REFERRAL SYSTEM (v5.0) ═══
     referralCode: uid.slice(0, 8).toUpperCase(),
     referredBy: null,
     referralCount: 0,
     referralEarnings: 0,
-    // ═══ SPIN SYSTEM (v5.0) ═══
     lastSpinDate: null,
     totalSpinWinnings: 0,
-    // ═══ AD REWARD (v5.0) ═══
     lastAdWatch: null,
     totalAdRewards: 0,
   });
@@ -177,7 +173,7 @@ export async function saveSettings(data) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  ADD MONEY REQUESTS (v4.0)
+//  ADD MONEY REQUESTS
 // ═══════════════════════════════════════════════════════════════════════
 
 export async function createAddMoneyRequest(data) {
@@ -247,7 +243,7 @@ export async function rejectAddMoneyRequest(requestId, userId) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  NOTIFICATIONS (v4.0)
+//  NOTIFICATIONS
 // ═══════════════════════════════════════════════════════════════════════
 
 export async function addNotification(userId, notification) {
@@ -284,7 +280,6 @@ export async function markNotificationRead(userId, notifId) {
 export async function processReferral(newUserId, referralCode) {
   if (!referralCode || !newUserId) return { success: false, error: 'Missing data' };
 
-  // Find referrer by code
   const usersCol = collection(db, 'users');
   const q = query(usersCol, where('referralCode', '==', referralCode.toUpperCase().trim()));
   const snap = await getDocs(q);
@@ -294,21 +289,18 @@ export async function processReferral(newUserId, referralCode) {
   const referrerDoc = snap.docs[0];
   const referrer = { id: referrerDoc.id, ...referrerDoc.data() };
 
-  // Prevent self-referral
   if (referrer.id === newUserId) return { success: false, error: 'Cannot refer yourself' };
 
   const now = new Date().toISOString();
   const batch = writeBatch(db);
 
-  // Give 20 TK LOCKED to new user (can join matches, can't withdraw)
   const newUserRef = doc(db, 'users', newUserId);
   batch.update(newUserRef, {
     referredBy: referrer.id,
     lockedBalance: 20,
-    balance: 0, // They start with 0 withdrawable, 20 locked
+    balance: 0,
   });
 
-  // Give 20 TK LOCKED to referrer
   const referrerRef = doc(db, 'users', referrer.id);
   batch.update(referrerRef, {
     referralCount: (referrer.referralCount || 0) + 1,
@@ -316,7 +308,6 @@ export async function processReferral(newUserId, referralCode) {
     lockedBalance: (referrer.lockedBalance || 0) + 20,
   });
 
-  // Log referral transaction
   const refTxId = safeTxId('tx_referral');
   batch.set(doc(db, 'transactions', refTxId), {
     id: refTxId,
@@ -328,10 +319,9 @@ export async function processReferral(newUserId, referralCode) {
     status: 'completed',
     referrerId: referrer.id,
     referrerCode: referralCode,
-    locked: true, // Flag: this is locked balance
+    locked: true,
   });
 
-  // Log referrer transaction
   const refTxId2 = safeTxId('tx_referral');
   batch.set(doc(db, 'transactions', refTxId2), {
     id: refTxId2,
@@ -345,7 +335,6 @@ export async function processReferral(newUserId, referralCode) {
     locked: true,
   });
 
-  // Store referral record
   const referralRecordId = safeTxId('ref');
   batch.set(doc(db, 'referrals', referralRecordId), {
     id: referralRecordId,
@@ -353,7 +342,7 @@ export async function processReferral(newUserId, referralCode) {
     referredId: newUserId,
     codeUsed: referralCode.toUpperCase(),
     amount: 20,
-    status: 'pending_match', // Unlocked when referred user joins first match
+    status: 'pending_match',
     createdAt: now,
   });
 
@@ -362,8 +351,6 @@ export async function processReferral(newUserId, referralCode) {
 }
 
 export async function unlockReferralBonus(userId) {
-  // Called when user joins their FIRST match
-  // Unlocks both referrer and referred user's locked balance
   const referralsCol = collection(db, 'referrals');
   const q = query(referralsCol, where('referredId', '==', userId), where('status', '==', 'pending_match'));
   const snap = await getDocs(q);
@@ -371,36 +358,30 @@ export async function unlockReferralBonus(userId) {
   if (snap.empty) return { unlocked: false };
 
   const batch = writeBatch(db);
-  let totalUnlocked = 0;
 
   snap.docs.forEach(docSnap => {
     const refData = docSnap.data();
 
-    // Unlock referred user's locked balance -> regular balance
     const referredRef = doc(db, 'users', refData.referredId);
     batch.update(referredRef, {
       lockedBalance: 0,
-      balance: 20, // Move from locked to regular
-    });
-
-    // Unlock referrer's locked balance -> regular balance
-    const referrerRef = doc(db, 'users', refData.referrerId);
-    batch.update(referrerRef, {
-      lockedBalance: 0, // Will be recalculated, but for simplicity
       balance: 20,
     });
 
-    // Update referral record
+    const referrerRef = doc(db, 'users', refData.referrerId);
+    batch.update(referrerRef, {
+      lockedBalance: 0,
+      balance: 20,
+    });
+
     batch.update(doc(db, 'referrals', docSnap.id), {
       status: 'unlocked',
       unlockedAt: new Date().toISOString(),
     });
-
-    totalUnlocked += 40; // 20 + 20
   });
 
   await batch.commit();
-  return { unlocked: true, totalUnlocked };
+  return { unlocked: true };
 }
 
 export async function fetchReferralStats(userId) {
@@ -410,7 +391,6 @@ export async function fetchReferralStats(userId) {
 
   const userData = userSnap.data();
 
-  // Count successful referrals
   const referralsCol = collection(db, 'referrals');
   const q = query(referralsCol, where('referrerId', '==', userId));
   const snap = await getDocs(q);
@@ -434,7 +414,7 @@ export async function fetchReferralStats(userId) {
 // ═══════════════════════════════════════════════════════════════════════
 
 const AD_REWARD_AMOUNT = 5;
-const AD_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes between ads
+const AD_COOLDOWN_MS = 5 * 60 * 1000;
 
 export async function watchAdReward(userId) {
   const userRef = doc(db, 'users', userId);
@@ -453,14 +433,12 @@ export async function watchAdReward(userId) {
   const nowISO = new Date().toISOString();
   const batch = writeBatch(db);
 
-  // Add 5 TK to balance
   batch.update(userRef, {
     balance: (userData.balance || 0) + AD_REWARD_AMOUNT,
     lastAdWatch: nowISO,
     totalAdRewards: (userData.totalAdRewards || 0) + AD_REWARD_AMOUNT,
   });
 
-  // Log transaction
   const txId = safeTxId('tx_ad');
   batch.set(doc(db, 'transactions', txId), {
     id: txId,
@@ -472,7 +450,6 @@ export async function watchAdReward(userId) {
     status: 'completed',
   });
 
-  // Log for profit tracking
   const adLogId = safeTxId('ad');
   batch.set(doc(db, 'adRewards', adLogId), {
     id: adLogId,
@@ -519,12 +496,10 @@ export async function spinClutchWheel(userId) {
   const userData = userSnap.data();
   const today = getTodayStr();
 
-  // Check if already spun today
   if (userData.lastSpinDate === today) {
     return { success: false, error: 'Already spun today. Come back tomorrow!' };
   }
 
-  // Weighted random selection
   const rand = Math.random();
   let cumulative = 0;
   let selected = SPIN_PAYOUTS[0];
@@ -541,14 +516,12 @@ export async function spinClutchWheel(userId) {
   const batch = writeBatch(db);
 
   if (selected.isFreeEntry) {
-    // Free match entry token
     batch.update(userRef, {
       lastSpinDate: today,
       freeMatchEntry: true,
-      freeMatchEntryExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h expiry
+      freeMatchEntryExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     });
   } else {
-    // Add TK to balance
     batch.update(userRef, {
       lastSpinDate: today,
       balance: (userData.balance || 0) + selected.amount,
@@ -556,7 +529,6 @@ export async function spinClutchWheel(userId) {
     });
   }
 
-  // Log spin
   const spinId = safeTxId('spin');
   batch.set(doc(db, 'spinLog', spinId), {
     id: spinId,
@@ -568,7 +540,6 @@ export async function spinClutchWheel(userId) {
     monthStr: getMonthStr(),
   });
 
-  // Log transaction
   const txId = safeTxId('tx_spin');
   batch.set(doc(db, 'transactions', txId), {
     id: txId,
@@ -594,11 +565,9 @@ export function canSpinToday(userData) {
 // ═══════════════════════════════════════════════════════════════════════
 
 export async function getPlatformProfitStats() {
-  const now = new Date().toISOString();
   const todayStart = startOfDay();
   const monthStart = startOfMonth();
 
-  // ── TODAY'S DATA ──
   const matchesCol = collection(db, 'matches');
   const todayMatchesSnap = await getDocs(query(matchesCol, where('createdAt', '>=', todayStart)));
   const todayMatches = todayMatchesSnap.docs.map(d => d.data());
@@ -612,22 +581,18 @@ export async function getPlatformProfitStats() {
     .filter(m => m.status === 'cancelled')
     .reduce((s, m) => s + (m.escrow?.refunded || 0), 0);
 
-  // ── MONTHLY DATA ──
   const monthMatchesSnap = await getDocs(query(matchesCol, where('createdAt', '>=', monthStart)));
   const monthMatches = monthMatchesSnap.docs.map(d => d.data());
   const totalRevenueMonth = monthMatches.reduce((s, m) => s + (m.entryFee || 0) * (m.joinedCount || 0), 0);
   const adminProfitMonth = Math.round(totalRevenueMonth * 0.20);
 
-  // ── SPENDING TRACKER ──
-  // Referral payouts
   const referralsCol = collection(db, 'referrals');
   const todayReferralsSnap = await getDocs(query(referralsCol, where('createdAt', '>=', todayStart)));
-  const referralPayoutsToday = todayReferralsSnap.docs.length * 40; // 20 + 20 per referral
+  const referralPayoutsToday = todayReferralsSnap.docs.length * 40;
 
   const monthReferralsSnap = await getDocs(query(referralsCol, where('createdAt', '>=', monthStart)));
   const referralPayoutsMonth = monthReferralsSnap.docs.length * 40;
 
-  // Ad rewards
   const adCol = collection(db, 'adRewards');
   const todayAdSnap = await getDocs(query(adCol, where('createdAt', '>=', todayStart)));
   const adRewardsToday = todayAdSnap.docs.reduce((s, d) => s + (d.data().amount || 0), 0);
@@ -635,7 +600,6 @@ export async function getPlatformProfitStats() {
   const monthAdSnap = await getDocs(query(adCol, where('createdAt', '>=', monthStart)));
   const adRewardsMonth = monthAdSnap.docs.reduce((s, d) => s + (d.data().amount || 0), 0);
 
-  // Spin payouts
   const spinCol = collection(db, 'spinLog');
   const todaySpinSnap = await getDocs(query(spinCol, where('createdAt', '>=', todayStart)));
   const spinPayoutsToday = todaySpinSnap.docs.reduce((s, d) => s + (d.data().amount || 0), 0);
@@ -643,14 +607,12 @@ export async function getPlatformProfitStats() {
   const monthSpinSnap = await getDocs(query(spinCol, where('createdAt', '>=', monthStart)));
   const spinPayoutsMonth = monthSpinSnap.docs.reduce((s, d) => s + (d.data().amount || 0), 0);
 
-  // ── TOTALS ──
   const totalSpendingsToday = referralPayoutsToday + adRewardsToday + spinPayoutsToday;
   const netProfitToday = adminProfitToday - totalSpendingsToday;
 
   const totalSpendingsMonth = referralPayoutsMonth + adRewardsMonth + spinPayoutsMonth;
   const netProfitMonth = adminProfitMonth - totalSpendingsMonth;
 
-  // ── FUND STATUS ──
   const usersCol = collection(db, 'users');
   const allUsersSnap = await getDocs(usersCol);
   const allUsers = allUsersSnap.docs.map(d => d.data());
@@ -662,18 +624,12 @@ export async function getPlatformProfitStats() {
   const pendingWdSnap = await getDocs(query(withdrawalsCol, where('status', '==', 'pending')));
   const pendingWithdrawals = pendingWdSnap.docs.reduce((s, d) => s + (d.data().amount || 0), 0);
 
-  const totalEscrow = allUsersSnap.docs
-    .map(() => 0)
-    .reduce((a, b) => a + b, 0); // Placeholder - calculated from matches
-
-  // Calculate active escrow from matches
   const activeMatchesSnap = await getDocs(query(matchesCol, where('status', 'in', ['upcoming', 'live'])));
   const activeEscrow = activeMatchesSnap.docs.reduce((s, d) => {
     const m = d.data();
     return s + (m.entryFee || 0) * (m.joinedCount || 0);
   }, 0);
 
-  // ── ALERTS ──
   const alerts = [];
   const lowPlayerMatches = todayMatches.filter(m => m.status === 'upcoming' && (m.joinedCount || 0) < (m.minPlayers || 10));
   if (lowPlayerMatches.length > 0) {
@@ -681,7 +637,7 @@ export async function getPlatformProfitStats() {
   }
   const cancelledToday = todayMatches.filter(m => m.status === 'cancelled').length;
   if (cancelledToday > 0) {
-    alerts.push({ type: 'error', message: `${cancelledToday} match(es) cancelled today (${formatTK(cancellationRefundsToday)} refunded)` });
+    alerts.push({ type: 'error', message: `${cancelledToday} match(es) cancelled today` });
   }
   if (totalSpendingsToday > adminProfitToday * 0.15) {
     alerts.push({ type: 'warning', message: 'Referral + ad costs exceed 15% of profit' });
@@ -705,7 +661,7 @@ export async function getPlatformProfitStats() {
       totalRevenue: totalRevenueMonth,
       totalSpendings: totalSpendingsMonth,
       netProfit: netProfitMonth,
-      adRevenueEstimate: Math.round(totalRevenueMonth * 0.002), // Rough estimate: $0.20 per 1000 views equivalent
+      adRevenueEstimate: Math.round(totalRevenueMonth * 0.002),
     },
     funds: {
       totalUserBalance,
@@ -718,13 +674,8 @@ export async function getPlatformProfitStats() {
   };
 }
 
-// Helper for formatting in profit stats
-function formatTK(amount) {
-  return amount.toLocaleString('en-BD') + ' TK';
-}
-
 // ═══════════════════════════════════════════════════════════════════════
-//  PRIZE DISTRIBUTION + ELO + GAMIFICATION (v4.0)
+//  PRIZE DISTRIBUTION + ELO + GAMIFICATION
 // ═══════════════════════════════════════════════════════════════════════
 
 export async function distributePrizes(matchId, matchData, resultPlayers, perKill) {
@@ -769,7 +720,7 @@ export async function distributePrizes(matchId, matchData, resultPlayers, perKil
         ign: player.ign || '',
         type: 'win',
         amount: totalPrize,
-        desc: `Prize: ${sanitize(matchData.title)} (#${player.position}) — UNCLAIMED (User not registered)`,
+        desc: `Prize: ${sanitize(matchData.title)} (#${player.position}) — UNCLAIMED`,
         matchId: matchId,
         date: now,
         status: 'completed',
@@ -786,13 +737,11 @@ export async function distributePrizes(matchId, matchData, resultPlayers, perKil
     const eloChange = calculateELO(currentElo, avgMatchElo, player.position, resultPlayers.length);
     const newElo = currentElo + eloChange;
 
-    // ═══ GAMIFICATION: Update stats ═══
     const newTotalKills = (user.totalKills || 0) + kills;
     const newTotalWins = (user.totalWins || 0) + (player.position === 1 ? 1 : 0);
     const newTotalEarnings = (user.totalEarnings || 0) + totalPrize;
     const newMatchesPlayed = (user.totalMatchesPlayed || 0) + 1;
 
-    // Check achievements to unlock
     const newAchievements = [...(user.achievements || [])];
     const checkAch = (id, condition) => {
       if (condition && !newAchievements.includes(id)) newAchievements.push(id);
@@ -846,7 +795,6 @@ export async function distributePrizes(matchId, matchData, resultPlayers, perKil
     });
   }
 
-  // Update match escrow distributed
   batch.update(matchRef, {
     result: { submittedAt: now, players: resultPlayers },
     prizeDistributed: (matchData.prizeDistributed || 0) + totalDistributed,
@@ -1106,7 +1054,6 @@ export function subscribeToUserTransactions(uid, onUpdate) {
 // ═══════════════════════════════════════════════════════════════════════
 
 export function subscribeToProfitStats(onUpdate) {
-  // Returns a function that refreshes profit stats every 30 seconds
   const refresh = async () => {
     try {
       const stats = await getPlatformProfitStats();
@@ -1116,7 +1063,7 @@ export function subscribeToProfitStats(onUpdate) {
     }
   };
 
-  refresh(); // Initial load
-  const interval = setInterval(refresh, 30000); // Refresh every 30s
+  refresh();
+  const interval = setInterval(refresh, 30000);
   return () => clearInterval(interval);
 }
