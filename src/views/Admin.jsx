@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useApp } from '../context'
 import { formatTK, formatTKShort, calculateMatchEconomics, calculateResultPrize, calculateAllResultPrizes, getRoomUnlockCountdown, maxSlotsForMode, showToast } from '../utils'
-import { approveAddMoneyRequest, rejectAddMoneyRequest } from "../database"
+import { approveAddMoneyRequest, rejectAddMoneyRequest, getPlatformProfitStats } from "../database"
 import { FF_MAPS, FF_MODES, FF_GAME_TYPES, KILL_REWARDS, RESULT_METHODS } from '../data'
 
 // ★ Inline fallback — remove this after updating utils.js
@@ -17,6 +17,7 @@ function modeColor(mode) {
 // ═══════════════════════════════════════
 const PERM_MAP = {
   'admin-overview': null,
+  'admin-profit': 'finance',      // ═══ v5.0: Profit dashboard
   'admin-create': 'matches',
   'admin-rooms': 'rooms',
   'admin-results': 'results',
@@ -79,7 +80,286 @@ function adminAction(dispatch, action, target, toastMsg, toastType) {
   dispatch({ type: 'LOG_ACTION', payload: { action, target } })
   if (toastMsg) showToast(dispatch, toastMsg, toastType || 'success')
 }
+// ═══════════════════════════════════════
+//  V5.0: PROFIT DASHBOARD — FINANCIAL CONTROL
+// ═══════════════════════════════════════
+function AdminProfit() {
+  const { state } = useApp()
+  const { profitStats } = state
+  const mobile = useIsMobile()
+  const [loading, setLoading] = useState(false)
+  const [localStats, setLocalStats] = useState(null)
 
+  useEffect(() => {
+    if (profitStats) {
+      setLocalStats(profitStats)
+      return
+    }
+    async function load() {
+      setLoading(true)
+      try {
+        const stats = await getPlatformProfitStats()
+        setLocalStats(stats)
+      } catch (err) {
+        console.error('Failed to load profit stats:', err)
+      }
+      setLoading(false)
+    }
+    load()
+  }, [profitStats])
+
+  const stats = profitStats || localStats
+
+  const exportCSV = () => {
+    if (!stats) return
+    const rows = [
+      ['CLUTCH ARENA BD — FINANCIAL REPORT'],
+      ['Generated', new Date().toLocaleString('en-BD')],
+      [''],
+      ['TODAY\'S DATA'],
+      ['Matches Created', stats.today.matchesCreated],
+      ['Full Matches', stats.today.fullMatches],
+      ['Total Entry Fees', stats.today.totalEntryFees],
+      ['Admin Profit (20%)', stats.today.adminProfit],
+      ['Prize Pool Paid', stats.today.prizePoolPaid],
+      ['Cancellation Refunds', stats.today.cancellationRefunds],
+      [''],
+      ['SPENDING TRACKER'],
+      ['Referral Payouts', stats.today.referralPayouts],
+      ['Ad Rewards', stats.today.adRewards],
+      ['Spin Payouts', stats.today.spinPayouts],
+      ['Total Spendings', stats.today.totalSpendings],
+      [''],
+      ['NET PROFIT', stats.today.netProfit],
+      [''],
+      ['MONTHLY DATA'],
+      ['Total Revenue', stats.month.totalRevenue],
+      ['Total Spendings', stats.month.totalSpendings],
+      ['Net Profit', stats.month.netProfit],
+      ['Ad Revenue Estimate ($)', stats.month.adRevenueEstimate],
+      [''],
+      ['FUND STATUS'],
+      ['Total User Balance', stats.funds.totalUserBalance],
+      ['Total Locked Balance', stats.funds.totalLockedBalance],
+      ['Active Escrow', stats.funds.activeEscrow],
+      ['Pending Withdrawals', stats.funds.pendingWithdrawals],
+      ['Total Platform Value', stats.funds.totalPlatformValue],
+    ]
+    const csv = rows.map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `clutch-profit-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  if (loading && !stats) {
+    return (
+      <div style={S.panel}>
+        <h1 style={S.title}><i className="fa-solid fa-chart-line" style={{ marginRight: 10, color: '#22c55e' }}></i>Financial Control</h1>
+        <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted, #555)' }}>
+          <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 32, marginBottom: 16, display: 'block' }}></i>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: 14 }}>Loading financial data...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!stats) {
+    return (
+      <div style={S.panel}>
+        <h1 style={S.title}><i className="fa-solid fa-chart-line" style={{ marginRight: 10, color: '#22c55e' }}></i>Financial Control</h1>
+        <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted, #555)' }}>
+          <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: 32, marginBottom: 16, display: 'block', color: '#fbbf24' }}></i>
+          <div style={{ fontFamily: 'var(--font-heading)', fontSize: 14 }}>Unable to load profit data</div>
+        </div>
+      </div>
+    )
+  }
+
+  const { today, month, funds, alerts } = stats
+
+  const CardGrid = ({ cards }) => (
+    <div style={{ display: 'grid', gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+      {cards.map((c, i) => (
+        <div key={i} style={{
+          padding: mobile ? '14px 12px' : '18px 16px', borderRadius: 14,
+          background: c.highlight ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.02)',
+          border: `1px solid ${c.highlight ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)'}`,
+          transition: 'all 0.3s ease',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = c.color + '40'; e.currentTarget.style.boxShadow = `0 4px 20px ${c.color}10` }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = c.highlight ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)'; e.currentTarget.style.boxShadow = 'none' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <div style={{ ...S.cardHeaderIcon(c.color), width: 28, height: 28 }}>
+              <i className={`fa-solid ${c.icon}`} style={{ fontSize: 12, color: c.color }}></i>
+            </div>
+            <span style={{ fontSize: mobile ? 9 : 10, color: 'var(--text-muted, #777)', fontFamily: 'var(--font-heading)', letterSpacing: 0.5, textTransform: 'uppercase', lineHeight: 1.2 }}>{c.label}</span>
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: mobile ? (typeof c.value === 'number' ? 22 : 14) : (typeof c.value === 'number' ? 24 : 16), fontWeight: 800, color: c.color }}>
+            {c.value}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
+  const profitCards = [
+    { label: 'Matches Created', value: today.matchesCreated, icon: 'fa-gamepad', color: '#6c8cff' },
+    { label: 'Full Matches', value: today.fullMatches, icon: 'fa-users', color: '#a78bfa' },
+    { label: 'Total Entry Fees', value: formatTK(today.totalEntryFees), icon: 'fa-sack-dollar', color: '#fbbf24' },
+    { label: 'Your 20% Profit', value: formatTK(today.adminProfit), icon: 'fa-chart-line', color: '#22c55e', highlight: true },
+    { label: 'Prize Pool Paid', value: formatTK(today.prizePoolPaid), icon: 'fa-trophy', color: '#a78bfa' },
+    { label: 'Cancellation Refunds', value: formatTK(today.cancellationRefunds), icon: 'fa-rotate-left', color: '#f87171' },
+  ]
+
+  const spendingCards = [
+    { label: 'Referral Payouts', value: formatTK(today.referralPayouts), icon: 'fa-user-plus', color: '#6c8cff' },
+    { label: 'Ad Rewards to Users', value: formatTK(today.adRewards), icon: 'fa-ad', color: '#fbbf24' },
+    { label: 'Spin Payouts', value: formatTK(today.spinPayouts), icon: 'fa-dice', color: '#a78bfa' },
+    { label: 'Total Spendings', value: formatTK(today.totalSpendings), icon: 'fa-money-bill-transfer', color: '#ef4444', highlight: true },
+  ]
+
+  const fundCards = [
+    { label: 'Available Balance', value: formatTK(funds.totalUserBalance), icon: 'fa-wallet', color: '#22c55e' },
+    { label: 'Held in Escrow', value: formatTK(funds.activeEscrow), icon: 'fa-vault', color: '#00f0ff' },
+    { label: 'Pending Withdrawals', value: formatTK(funds.pendingWithdrawals), icon: 'fa-hourglass-half', color: '#fbbf24' },
+    { label: 'Total Platform Value', value: formatTK(funds.totalPlatformValue), icon: 'fa-building-columns', color: '#a78bfa', highlight: true },
+  ]
+
+  return (
+    <div style={S.panel}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
+        <h1 style={{ ...S.title, margin: 0 }}>
+          <i className="fa-solid fa-chart-line" style={{ marginRight: 10, color: '#22c55e' }}></i>
+          Financial Control
+        </h1>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={exportCSV} style={{ ...S.btnGhost, background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderColor: 'rgba(34,197,94,0.2)', padding: '8px 14px', fontSize: 12 }}>
+            <i className="fa-solid fa-file-csv"></i> Export CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Alerts */}
+      {alerts.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          {alerts.map((alert, i) => (
+            <div key={i} style={{
+              padding: '12px 16px', borderRadius: 12, marginBottom: 8,
+              background: alert.type === 'error' ? 'rgba(239,68,68,0.08)' : 'rgba(251,191,36,0.08)',
+              border: `1px solid ${alert.type === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(251,191,36,0.15)'}`,
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <i className={`fa-solid ${alert.type === 'error' ? 'fa-circle-xmark' : 'fa-triangle-exclamation'}`} style={{ color: alert.type === 'error' ? '#ef4444' : '#fbbf24', fontSize: 14, flexShrink: 0 }}></i>
+              <span style={{ fontSize: 12, color: alert.type === 'error' ? '#ef4444' : '#fbbf24', fontWeight: 600 }}>{alert.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Today's Live Data */}
+      <div style={{ ...S.card, marginBottom: 20 }}>
+        <div style={{ ...S.cardHeader, background: 'rgba(0,240,255,0.04)' }}>
+          <div style={S.cardHeaderIcon('#00f0ff')}><i className="fa-solid fa-bolt" style={{ fontSize: 14, color: '#00f0ff' }}></i></div>
+          <h3 style={S.cardHeaderTitle}>Today's Live Data</h3>
+          <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-muted, #555)' }}>{new Date().toLocaleDateString('en-BD')}</span>
+        </div>
+        <div style={{ padding: '18px' }}>
+          <CardGrid cards={profitCards} />
+        </div>
+      </div>
+
+      {/* Spending Tracker */}
+      <div style={{ ...S.card, marginBottom: 20 }}>
+        <div style={{ ...S.cardHeader, background: 'rgba(239,68,68,0.04)' }}>
+          <div style={S.cardHeaderIcon('#ef4444')}><i className="fa-solid fa-money-bill-wave" style={{ fontSize: 14, color: '#ef4444' }}></i></div>
+          <h3 style={S.cardHeaderTitle}>Spending Tracker</h3>
+        </div>
+        <div style={{ padding: '18px' }}>
+          <CardGrid cards={spendingCards} />
+        </div>
+      </div>
+
+      {/* Net Profit — Big Card */}
+      <div style={{
+        padding: mobile ? '20px 16px' : '28px 24px', borderRadius: 16,
+        background: 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(0,240,255,0.04) 100%)',
+        border: '1px solid rgba(34,197,94,0.2)',
+        marginBottom: 20,
+        textAlign: 'center',
+      }}>
+        <div style={{ fontSize: 11, color: 'var(--text-muted, #777)', fontFamily: 'var(--font-heading)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
+          Net Profit Today
+        </div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: mobile ? 32 : 44, fontWeight: 800, color: '#22c55e', textShadow: '0 0 30px rgba(34,197,94,0.2)' }}>
+          {formatTK(today.netProfit)}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 12, flexWrap: 'wrap' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: 'var(--text-muted, #666)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Gross Profit</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: '#22c55e' }}>{formatTK(today.adminProfit)}</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: 'var(--text-muted, #666)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Total Spendings</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: '#ef4444' }}>−{formatTK(today.totalSpendings)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Monthly Data */}
+      <div style={{ ...S.card, marginBottom: 20 }}>
+        <div style={{ ...S.cardHeader, background: 'rgba(251,191,36,0.04)' }}>
+          <div style={S.cardHeaderIcon('#fbbf24')}><i className="fa-solid fa-calendar-days" style={{ fontSize: 14, color: '#fbbf24' }}></i></div>
+          <h3 style={S.cardHeaderTitle}>This Month</h3>
+          <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-muted, #555)' }}>{new Date().toLocaleDateString('en-BD', { month: 'long', year: 'numeric' })}</span>
+        </div>
+        <div style={{ padding: '18px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 14 }}>
+            <div style={{ textAlign: 'center', padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted, #666)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Total Revenue</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: '#fbbf24' }}>{formatTK(month.totalRevenue)}</div>
+            </div>
+            <div style={{ textAlign: 'center', padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted, #666)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Total Spendings</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: '#ef4444' }}>{formatTK(month.totalSpendings)}</div>
+            </div>
+            <div style={{ textAlign: 'center', padding: '14px', borderRadius: 12, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)' }}>
+              <div style={{ fontSize: 10, color: '#22c55e', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Net Profit</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: '#22c55e' }}>{formatTK(month.netProfit)}</div>
+            </div>
+            <div style={{ textAlign: 'center', padding: '14px', borderRadius: 12, background: 'rgba(0,240,255,0.04)', border: '1px solid rgba(0,240,255,0.1)' }}>
+              <div style={{ fontSize: 10, color: '#00f0ff', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Ad Revenue (Est.)</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: '#00f0ff' }}>${month.adRevenueEstimate}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fund Status */}
+      <div style={{ ...S.card, marginBottom: 20 }}>
+        <div style={{ ...S.cardHeader, background: 'rgba(167,139,250,0.04)' }}>
+          <div style={S.cardHeaderIcon('#a78bfa')}><i className="fa-solid fa-building-columns" style={{ fontSize: 14, color: '#a78bfa' }}></i></div>
+          <h3 style={S.cardHeaderTitle}>Total Fund Status</h3>
+        </div>
+        <div style={{ padding: '18px' }}>
+          <CardGrid cards={fundCards} />
+        </div>
+      </div>
+
+      {/* Auto-refresh indicator */}
+      <div style={{ textAlign: 'center', padding: '10px 0' }}>
+        <span style={{ fontSize: 10, color: 'var(--text-muted, #444)', fontFamily: 'var(--font-heading)' }}>
+          <i className="fa-solid fa-rotate" style={{ marginRight: 4 }}></i>
+          Auto-refreshes every 30 seconds
+        </span>
+      </div>
+    </div>
+  )
+}
 // ═══════════════════════════════════════
 //  1. OVERVIEW
 // ═══════════════════════════════════════
@@ -2102,6 +2382,7 @@ function AdminActivityLog() {
 // ═══════════════════════════════════════
 const ADMIN_TABS = [
   { id: 'admin-overview', label: 'Overview', icon: 'fa-chart-pie', color: '#00f0ff' },
+  { id: 'admin-profit', label: 'Profit', icon: 'fa-chart-line', color: '#22c55e' },  // ═══ v5.0
   { id: 'admin-create', label: 'Create Match', icon: 'fa-circle-plus', color: '#a78bfa' },
   { id: 'admin-rooms', label: 'Rooms', icon: 'fa-key', color: '#fbbf24' },
   { id: 'admin-results', label: 'Results', icon: 'fa-clipboard-check', color: '#22c55e' },
@@ -2204,7 +2485,7 @@ export default function Admin() {
       )}
 
       {/* Tab content — guard each with canAccess */}
-      {activeTab === 'admin-overview' && canAccess('admin-overview') && <AdminOverview />}
+    {activeTab === 'admin-profit' && canAccess('admin-profit') && <AdminProfit />}
       {activeTab === 'admin-create' && canAccess('admin-create') && <AdminCreateMatch />}
       {activeTab === 'admin-rooms' && canAccess('admin-rooms') && <AdminRooms />}
       {activeTab === 'admin-results' && canAccess('admin-results') && <AdminResults />}
