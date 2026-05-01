@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useApp } from '../context'
-import { formatTK, modeColor, mapIcon, getMatchPhase, getMatchCountdown, slotPercent, phaseColor, phaseLabel } from '../utils'
+import { formatTK, slotPercent, getMatchPhase, getMatchCountdown } from '../utils'
+import './MatchCard.css' // ← Import CSS separately
 
 function parseMatchTime(startTime) {
   if (!startTime) return null
@@ -25,62 +26,63 @@ function DigitalCountdown({ ms }) {
   const s = Math.floor((ms % 60000) / 1000)
 
   const Digit = ({ value, label }) => (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{
-        fontFamily: 'var(--font-number)', fontSize: 18, fontWeight: 800,
-        color: 'var(--cyan)', fontVariantNumeric: 'tabular-nums',
-        textShadow: '0 0 10px rgba(0,240,255,0.5)',
-        letterSpacing: '-0.02em',
-      }}>
-        {String(value).padStart(2, '0')}
-      </div>
-      <div style={{
-        fontSize: 8, fontWeight: 700, color: 'var(--text-muted)',
-        textTransform: 'uppercase', letterSpacing: '0.15em',
-      }}>
-        {label}
-      </div>
+    <div className="countdown-digit-box">
+      <div className="countdown-digit-value">{String(value).padStart(2, '0')}</div>
+      <div className="countdown-digit-label">{label}</div>
     </div>
   )
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      {h > 0 && <><Digit value={h} label="HR" /><span style={{ color: 'var(--cyan)', fontWeight: 800 }}>:</span></>}
+    <div className="digital-countdown">
+      {h > 0 && <><Digit value={h} label="HR" /><span className="countdown-separator">:</span></>}
       <Digit value={m} label="MIN" />
-      <span style={{ color: 'var(--cyan)', fontWeight: 800 }}>:</span>
+      <span className="countdown-separator">:</span>
       <Digit value={s} label="SEC" />
     </div>
   )
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  PROGRESS RING (Slots)
+//  PROGRESS RING (Slots) — Gambit CIS inspired
 // ═══════════════════════════════════════════════════════════════════════
 function SlotRing({ current, max, phase }) {
   const pct = Math.min((current / max) * 100, 100)
   const circumference = 2 * Math.PI * 18
   const offset = circumference - (pct / 100) * circumference
-
-  const color = phase === 'live' ? 'var(--red)' : phase === 'completed' ? 'var(--text-dim)' : 'var(--cyan)'
+  const color = phase === 'live' ? '#ef4444' : phase === 'completed' ? '#6b7280' : '#06b6d4'
 
   return (
-    <div style={{ position: 'relative', width: 40, height: 40 }}>
+    <div className="slot-ring">
       <svg width="40" height="40" viewBox="0 0 40 40" style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx="20" cy="20" r="18" fill="none" stroke="var(--bg-elevated)" strokeWidth="3" />
-        <circle
-          cx="20" cy="20" r="18" fill="none" stroke={color}
-          strokeWidth="3" strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
-        />
+        <circle cx="20" cy="20" r="18" fill="none" stroke="#1a1a2e" strokeWidth="3" />
+        <circle cx="20" cy="20" r="18" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)' }} />
       </svg>
-      <div style={{
-        position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'var(--font-number)', fontSize: 11, fontWeight: 800, color: 'var(--text)',
-      }}>
-        {current}
-      </div>
+      <div className="slot-ring-text">{current}</div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  AVATAR STACK (Inspired by eSports Mobile)
+// ═══════════════════════════════════════════════════════════════════════
+function AvatarStack({ participants = [], maxShow = 4 }) {
+  const displayCount = Math.min(participants.length, maxShow)
+  const remaining = Math.max(participants.length - maxShow, 0)
+
+  return (
+    <div className="avatar-stack">
+      {participants.slice(0, maxShow).map((p, i) => (
+        <div key={p.userId || i} className="avatar-item" style={{ zIndex: maxShow - i }} title={p.name || p.username || 'Player'}>
+          {p.avatar ? (
+            <img src={p.avatar} alt="" />
+          ) : (
+            <div className="avatar-placeholder">{(p.name || p.username || '?')[0].toUpperCase()}</div>
+          )}
+        </div>
+      ))}
+      {remaining > 0 && <div className="avatar-more">+{remaining}</div>}
     </div>
   )
 }
@@ -97,8 +99,8 @@ function useTilt() {
     const rect = ref.current.getBoundingClientRect()
     const x = (e.clientX - rect.left) / rect.width
     const y = (e.clientY - rect.top) / rect.height
-    const rotateX = (y - 0.5) * -12
-    const rotateY = (x - 0.5) * 12
+    const rotateX = (y - 0.5) * -10
+    const rotateY = (x - 0.5) * 10
     setStyle({
       transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`,
       transition: 'transform 0.1s ease-out',
@@ -126,7 +128,7 @@ function ParticleBurst({ trigger }) {
     const newParticles = Array.from({ length: 12 }, (_, i) => ({
       id: Date.now() + i,
       angle: (i / 12) * 360,
-      color: ['var(--cyan)', 'var(--purple)', 'var(--gold)', '#fff'][i % 4],
+      color: ['#06b6d4', '#8b5cf6', '#f59e0b', '#ffffff'][i % 4],
       delay: i * 30,
     }))
     setParticles(newParticles)
@@ -137,35 +139,63 @@ function ParticleBurst({ trigger }) {
   if (particles.length === 0) return null
 
   return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 100, overflow: 'hidden' }}>
+    <div className="particle-burst">
       {particles.map(p => (
-        <div
-          key={p.id}
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            width: 4,
-            height: 4,
-            borderRadius: '50%',
-            background: p.color,
-            boxShadow: `0 0 6px ${p.color}`,
-            animation: `particleBurst 0.6s ease-out ${p.delay}ms forwards`,
-            transform: `rotate(${p.angle}deg) translateX(0)`,
-          }}
-        />
+        <div key={p.id} className="particle" style={{
+          background: p.color,
+          boxShadow: `0 0 6px ${p.color}`,
+          animationDelay: `${p.delay}ms`,
+          transform: `rotate(${p.angle}deg)`,
+        }} />
       ))}
     </div>
   )
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  MAIN MATCH CARD
+//  WHATSAPP SHARE BUTTON — V5.0 Growth Engine
 // ═══════════════════════════════════════════════════════════════════════
-export default function MatchCard({ match, animated, index = 0 }) {
+function WhatsAppShare({ match, onShare }) {
+  const handleShare = (e) => {
+    e.stopPropagation()
+    const text = `🔥 *${match.title}* on Clutch Arena BD!\n\n` +
+      `🎮 Mode: ${match.mode}\n` +
+      `🗺️ Map: ${match.map}\n` +
+      `💰 Prize Pool: ${formatTK(match.prizePool || match.entryFee * match.maxSlots * 0.8)} TK\n` +
+      `🎫 Entry: ${formatTK(match.entryFee)} TK\n` +
+      `👥 ${match.joinedCount || 0}/${match.maxSlots} Joined\n\n` +
+      `Join now: https://clutcharena.bd/match/${match.id}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+    onShare?.()
+  }
+
+  return (
+    <button className="whatsapp-share-btn" onClick={handleShare} title="Share on WhatsApp">
+      <i className="fa-brands fa-whatsapp" />
+    </button>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  PRIZE BADGE — Floating trophy indicator
+// ═══════════════════════════════════════════════════════════════════════
+function PrizeBadge({ amount }) {
+  return (
+    <div className="prize-badge">
+      <i className="fa-solid fa-trophy" />
+      <span>{formatTK(amount)} TK</span>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  MAIN MATCH CARD V2 — COMPLETE GAMING AESTHETIC
+// ═══════════════════════════════════════════════════════════════════════
+export default function MatchCard({ match, variant = 'default', index = 0 }) {
   const { dispatch, navigate } = useApp()
   const [countdown, setCountdown] = useState(getMatchCountdown(match))
   const [burstTrigger, setBurstTrigger] = useState(0)
+  const [isHovered, setIsHovered] = useState(false)
   const { ref, style, onMouseMove, onMouseLeave } = useTilt()
 
   const phase = getMatchPhase(match)
@@ -173,19 +203,14 @@ export default function MatchCard({ match, animated, index = 0 }) {
   const isUpcoming = phase === 'upcoming'
   const isCompleted = phase === 'completed'
   const pct = slotPercent(match)
-
   const prizePoolValue = match.prizePool || Math.round(match.entryFee * match.maxSlots * 0.8)
 
-  // Live countdown
   useEffect(() => {
     if (!isUpcoming) return
-    const interval = setInterval(() => {
-      setCountdown(getMatchCountdown(match))
-    }, 1000)
+    const interval = setInterval(() => setCountdown(getMatchCountdown(match)), 1000)
     return () => clearInterval(interval)
   }, [isUpcoming, match])
 
-  // Parse scheduled time
   const matchTimeStr = (() => {
     const ts = parseMatchTime(match.startTime)
     if (!ts) return ''
@@ -206,396 +231,158 @@ export default function MatchCard({ match, animated, index = 0 }) {
     dispatch({ type: 'SHOW_MODAL', payload: { type: 'join-match', matchId: match.id } })
   }
 
-  const handleViewDetail = () => {
-    navigate(`match-detail/${match.id}`)
-  }
+  const handleViewDetail = () => navigate(`match-detail/${match.id}`)
+  const handleShareMatch = () => dispatch({ type: 'SHARE_MATCH', payload: match.id })
 
   const modeIcon = match.mode === 'Solo' ? 'fa-user'
     : match.mode === 'Duo' ? 'fa-user-group'
     : match.mode === 'Clash Squad' ? 'fa-crosshairs'
     : 'fa-shield-halved'
 
-  // Phase-based styling
-  const phaseStyles = {
-    live: {
-      border: '1px solid rgba(255, 45, 85, 0.3)',
-      glow: '0 0 30px rgba(255, 45, 85, 0.15), inset 0 0 30px rgba(255, 45, 85, 0.05)',
-      badgeBg: 'linear-gradient(135deg, var(--red), #ff6b8a)',
-      badgeText: '#fff',
-      accent: 'var(--red)',
-      fillBar: 'linear-gradient(90deg, var(--red), #ff6b8a)',
-      statusIcon: 'fa-solid fa-tower-broadcast',
-      statusText: 'LIVE NOW',
-    },
-    upcoming: {
-      border: '1px solid rgba(0, 240, 255, 0.15)',
-      glow: '0 0 30px rgba(0, 240, 255, 0.08), inset 0 0 30px rgba(0, 240, 255, 0.03)',
-      badgeBg: 'linear-gradient(135deg, var(--cyan), var(--purple))',
-      badgeText: '#000',
-      accent: 'var(--cyan)',
-      fillBar: 'linear-gradient(90deg, var(--cyan), var(--purple))',
-      statusIcon: 'fa-regular fa-clock',
-      statusText: matchTimeStr || 'UPCOMING',
-    },
-    completed: {
-      border: '1px solid var(--glass-border)',
-      glow: 'none',
-      badgeBg: 'var(--bg-elevated)',
-      badgeText: 'var(--text-muted)',
-      accent: 'var(--text-muted)',
-      fillBar: 'var(--bg-highlight)',
-      statusIcon: 'fa-solid fa-check-circle',
-      statusText: 'COMPLETED',
-    },
-  }
+  const isGlow = variant === 'glow'
+  const isDim = variant === 'dim'
 
-  const ps = phaseStyles[phase] || phaseStyles.upcoming
+  const phaseColors = {
+    live: { accent: '#ef4444', gradient: 'linear-gradient(135deg, #ef4444, #f97316)', glow: 'rgba(239, 68, 68, 0.3)' },
+    upcoming: { accent: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6, #06b6d4)', glow: 'rgba(139, 92, 246, 0.3)' },
+    completed: { accent: '#6b7280', gradient: 'linear-gradient(135deg, #374151, #4b5563)', glow: 'transparent' },
+  }
+  const pc = phaseColors[phase] || phaseColors.upcoming
 
   return (
     <div
       ref={ref}
       onClick={handleViewDetail}
       onMouseMove={onMouseMove}
-      onMouseLeave={onMouseLeave}
-      className="fade-in"
-      style={{
-        ...style,
-        animationDelay: `${index * 80}ms`,
-        position: 'relative',
-        borderRadius: 'var(--radius-lg)',
-        overflow: 'hidden',
-        cursor: 'pointer',
-        background: 'var(--glass-bg)',
-        backdropFilter: 'var(--glass-blur)',
-        border: ps.border,
-        boxShadow: `0 8px 32px rgba(0,0,0,0.4), ${ps.glow}`,
-        WebkitTapHighlightColor: 'transparent',
-        transformStyle: 'preserve-3d',
-        willChange: 'transform',
-      }}
+      onMouseLeave={(e) => { onMouseLeave(e); setIsHovered(false) }}
+      onMouseEnter={() => setIsHovered(true)}
+      className={`match-card-v2 ${isGlow ? 'match-card-glow' : ''} ${isDim ? 'match-card-dim' : ''}`}
+      style={{ ...style, animationDelay: `${index * 80}ms`, '--card-accent': pc.accent, '--card-glow': pc.glow }}
     >
-      {/* ═══ HOLOGRAPHIC SHINE OVERLAY ═══ */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.03) 45%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 55%, transparent 60%)',
-        backgroundSize: '200% 100%',
-        animation: 'shineSweep 3s ease-in-out infinite',
-        pointerEvents: 'none', zIndex: 5,
-      }} />
+      {isGlow && <div className={`card-glow-border ${isHovered ? 'active' : ''}`} style={{ background: pc.gradient }} />}
+      <div className="holographic-shine" />
+      {isLive && <div className="live-pulse-ring" />}
 
-      {/* ═══ LIVE PULSE RING (Live only) ═══ */}
-      {isLive && (
-        <div style={{
-          position: 'absolute', inset: -1,
-          borderRadius: 'var(--radius-lg)',
-          background: 'linear-gradient(135deg, var(--red), var(--purple), var(--cyan))',
-          opacity: 0.2,
-          zIndex: -1,
-          filter: 'blur(12px)',
-          animation: 'pulse-live 3s ease-in-out infinite',
-        }} />
-      )}
-
-      {/* ═══ TOP SECTION: IMAGE + BADGES ═══ */}
-      <div style={{
-        position: 'relative', height: 140,
-        overflow: 'hidden',
-        background: 'linear-gradient(135deg, var(--bg-deep), var(--bg-raised))',
-      }}>
-        {/* Map Background */}
+      <div className="match-card-header">
         {match.image ? (
-          <img
-            src={match.image}
-            alt=""
-            style={{
-              width: '100%', height: '100%', objectFit: 'cover',
-              opacity: 0.4, transition: 'transform 0.6s ease, opacity 0.3s ease',
-            }}
-            className="match-card-bg"
-          />
+          <img src={match.image} alt="" className="match-card-bg" />
         ) : (
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: `linear-gradient(135deg, ${phase === 'live' ? 'rgba(255,45,85,0.1)' : 'var(--bg-deep)'}, var(--bg-raised))`,
-          }} />
+          <div className="match-card-bg-fallback" style={{ background: pc.gradient }} />
         )}
+        <div className="match-card-overlay" />
 
-        {/* Gradient Overlay */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to bottom, transparent 40%, var(--bg-raised) 100%)',
-        }} />
-
-        {/* Status Badge (Top Left) */}
-        <div style={{
-          position: 'absolute', top: 12, left: 12, zIndex: 10,
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '4px 12px',
-          borderRadius: 'var(--radius-sm)',
-          background: ps.badgeBg,
-          color: ps.badgeText,
-          fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 800,
-          textTransform: 'uppercase', letterSpacing: '0.12em',
-          boxShadow: isLive ? 'var(--red-glow)' : 'var(--cyan-glow)',
-        }}>
-          {isLive && (
-            <span style={{
-              width: 6, height: 6, borderRadius: '50%', background: '#fff',
-              animation: 'blink 1.2s infinite',
-              boxShadow: '0 0 8px #fff',
-            }} />
-          )}
-          <i className={ps.statusIcon} style={{ fontSize: 10 }} />
-          {ps.statusText}
+        <div className="status-badge" style={{ background: pc.gradient, boxShadow: `0 0 20px ${pc.glow}` }}>
+          {isLive && <span className="live-dot" />}
+          <i className={isLive ? 'fa-solid fa-tower-broadcast' : isUpcoming ? 'fa-regular fa-clock' : 'fa-solid fa-check-circle'} />
+          {isLive ? 'LIVE NOW' : isUpcoming ? matchTimeStr || 'UPCOMING' : 'COMPLETED'}
         </div>
 
-        {/* NO REFUND Badge (Top Right) */}
+        <div className="prize-badge-wrapper">
+          <PrizeBadge amount={prizePoolValue} />
+        </div>
+
         {!isCompleted && (
-          <div style={{
-            position: 'absolute', top: 12, right: 12, zIndex: 10,
-            padding: '3px 8px',
-            borderRadius: 'var(--radius-sm)',
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.25)',
-            fontFamily: 'var(--font-body)', fontSize: 9, fontWeight: 800,
-            color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '0.1em',
-          }}>
-            No Refund
+          <div className="no-refund-badge">
+            <i className="fa-solid fa-shield-halved" /> No Refund
           </div>
         )}
 
-        {/* Mode Badge (Bottom Left) */}
-        <div style={{
-          position: 'absolute', bottom: 12, left: 12, zIndex: 10,
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '4px 10px',
-          borderRadius: 'var(--radius-sm)',
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid var(--glass-border)',
-          fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 700,
-          color: 'var(--text-secondary)', textTransform: 'uppercase',
-        }}>
-          <i className={`fa-solid ${modeIcon}`} style={{ color: ps.accent, fontSize: 11 }} />
+        <div className="mode-badge">
+          <i className={`fa-solid ${modeIcon}`} style={{ color: pc.accent }} />
           {match.mode}
         </div>
 
-        {/* Slot Ring (Bottom Right) */}
-        <div style={{ position: 'absolute', bottom: 8, right: 12, zIndex: 10 }}>
+        <div className="slot-ring-wrapper">
           <SlotRing current={match.joinedCount || 0} max={match.maxSlots} phase={phase} />
         </div>
+
+        {!isCompleted && (
+          <div className="share-wrapper">
+            <WhatsAppShare match={match} onShare={handleShareMatch} />
+          </div>
+        )}
       </div>
 
-      {/* ═══ CONTENT SECTION ═══ */}
-      <div style={{ padding: '16px 18px', position: 'relative', zIndex: 10 }}>
-        {/* Title */}
-        <h3 style={{
-          fontFamily: 'var(--font-hero)', fontSize: 16, fontWeight: 800,
-          color: 'var(--text)', textTransform: 'uppercase',
-          letterSpacing: '-0.02em', margin: '0 0 10px',
-          lineHeight: 1.2,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          textShadow: isLive ? '0 0 20px rgba(255,45,85,0.3)' : 'none',
-        }}>
+      <div className="match-card-content">
+        <h3 className="match-title" style={{ textShadow: isLive ? `0 0 20px ${pc.glow}` : 'none' }}>
           {match.title}
         </h3>
 
-        {/* Countdown (Upcoming only, < 1 hour) */}
         {isUpcoming && countdown > 0 && countdown < 3600000 && (
-          <div style={{ marginBottom: 12 }}>
-            <DigitalCountdown ms={countdown} />
+          <div className="countdown-wrapper"><DigitalCountdown ms={countdown} /></div>
+        )}
+
+        <div className="match-meta-row">
+          <span className="meta-item"><i className="fa-solid fa-location-dot" style={{ color: pc.accent }} />{match.map}</span>
+          <span className="meta-dot" />
+          <span className="meta-item">{match.gameType === 'BR' ? 'TPP' : 'FPP'}</span>
+          <span className="meta-dot" />
+          <span className="meta-item"><i className="fa-solid fa-users" style={{ color: pc.accent }} />{match.joinedCount || 0}/{match.maxSlots}</span>
+        </div>
+
+        {match.joined && match.joined.length > 0 && (
+          <div className="match-avatars-row">
+            <AvatarStack participants={match.joined} maxShow={4} />
+            <span className="players-text">{match.joinedCount || 0} warriors joined</span>
           </div>
         )}
 
-        {/* Info Row */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12,
-          flexWrap: 'wrap',
-        }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontSize: 12, color: 'var(--text-muted)',
-            fontFamily: 'var(--font-body)', fontWeight: 600,
-          }}>
-            <i className="fa-solid fa-location-dot" style={{ color: ps.accent, fontSize: 11 }} />
-            {match.map}
+        <div className="slot-progress">
+          <div className="slot-track">
+            <div className="slot-fill" style={{ width: `${pct}%`, background: pc.gradient, boxShadow: `0 0 10px ${pc.glow}` }} />
           </div>
-          <div style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--text-dim)' }} />
-          <div style={{
-            fontSize: 12, color: 'var(--text-muted)',
-            fontFamily: 'var(--font-number)', fontWeight: 700,
-          }}>
-            {match.gameType === 'BR' ? 'TPP' : 'FPP'}
-          </div>
-          <div style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--text-dim)' }} />
-          <div style={{
-            fontSize: 12, color: 'var(--text-muted)',
-            fontFamily: 'var(--font-number)', fontWeight: 700,
-          }}>
-            {match.joinedCount || 0}/{match.maxSlots} Players
+          <div className="slot-labels">
+            <span>Slots Filled</span>
+            <span style={{ color: pc.accent }}>{Math.round(pct)}%</span>
           </div>
         </div>
 
-        {/* Slot Progress Bar */}
-        <div style={{ marginBottom: 14 }}>
-          <div style={{
-            height: 5, background: 'var(--bg-elevated)',
-            borderRadius: 'var(--radius-full)', overflow: 'hidden',
-            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)',
-          }}>
-            <div style={{
-              height: '100%', width: `${pct}%`,
-              background: ps.fillBar,
-              borderRadius: 'var(--radius-full)',
-              boxShadow: `0 0 10px ${isLive ? 'rgba(255,45,85,0.4)' : 'rgba(0,240,255,0.3)'}`,
-              transition: 'width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            }} />
-          </div>
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', marginTop: 4,
-            fontSize: 10, fontFamily: 'var(--font-number)', fontWeight: 700,
-          }}>
-            <span style={{ color: 'var(--text-muted)' }}>Slots Filled</span>
-            <span style={{ color: ps.accent }}>{Math.round(pct)}%</span>
-          </div>
-        </div>
-
-        {/* Per Kill Reward */}
         {match.perKill > 0 && !isCompleted && (
-          <div style={{ marginBottom: 14 }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '6px 14px',
-              borderRadius: 'var(--radius-sm)',
-              background: 'linear-gradient(135deg, rgba(251,191,36,0.15), rgba(245,158,11,0.05))',
-              border: '1px solid rgba(251,191,36,0.2)',
-              fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 800,
-              color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.05em',
-              boxShadow: 'var(--gold-glow)',
-            }}>
-              <i className="fa-solid fa-crosshairs" style={{ fontSize: 11 }} />
-              +{match.perKill} TK per Kill
-            </div>
+          <div className="per-kill-badge">
+            <i className="fa-solid fa-crosshairs" />+{match.perKill} TK per Kill
           </div>
         )}
 
-        {/* Prize Pool + Entry Fee Row */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '12px 0', borderTop: '1px solid var(--glass-border)',
-        }}>
-          <div>
-            <div style={{
-              fontSize: 9, fontWeight: 700, color: 'var(--text-muted)',
-              textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 2,
-            }}>
-              Entry Fee
-            </div>
-            <div style={{
-              fontFamily: 'var(--font-number)', fontSize: 18, fontWeight: 800,
-              color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 4,
-            }}>
-              <i className="fa-solid fa-ticket" style={{ fontSize: 12, color: 'var(--purple)' }} />
-              {formatTK(match.entryFee)}
-            </div>
+        <div className="prize-row">
+          <div className="prize-item">
+            <div className="prize-label">Entry Fee</div>
+            <div className="prize-value"><i className="fa-solid fa-ticket" style={{ color: '#8b5cf6' }} />{formatTK(match.entryFee)}</div>
           </div>
-
-          <div style={{ textAlign: 'right' }}>
-            <div style={{
-              fontSize: 9, fontWeight: 700, color: 'var(--text-muted)',
-              textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 2,
-            }}>
-              Prize Pool
-            </div>
-            <div style={{
-              fontFamily: 'var(--font-number)', fontSize: 22, fontWeight: 800,
-              color: 'var(--gold)', textShadow: 'var(--gold-glow)',
-              display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end',
-            }}>
-              <i className="fa-solid fa-trophy" style={{ fontSize: 14 }} />
-              {formatTK(prizePoolValue)}
-            </div>
+          <div className="prize-item right">
+            <div className="prize-label">Prize Pool</div>
+            <div className="prize-value gold"><i className="fa-solid fa-trophy" />{formatTK(prizePoolValue)}</div>
           </div>
         </div>
       </div>
 
-      {/* ═══ ACTION BAR ═══ */}
       {!isCompleted && (
-        <div style={{
-          padding: '14px 18px',
-          background: 'var(--bg-raised)',
-          borderTop: '1px solid var(--glass-border)',
-          position: 'relative', zIndex: 10,
-        }}>
+        <div className="match-card-actions">
           <ParticleBurst trigger={burstTrigger} />
           <button
+            className="join-btn-v2"
+            style={{ background: pc.gradient, boxShadow: `0 4px 20px ${pc.glow}` }}
             onClick={handleJoin}
-            className="join-btn"
-            style={{
-              width: '100%', padding: '14px 24px',
-              borderRadius: 'var(--radius)',
-              border: 'none',
-              background: isLive
-                ? 'linear-gradient(135deg, var(--red), #ff6b8a)'
-                : 'linear-gradient(135deg, var(--cyan), var(--purple))',
-              color: '#fff',
-              fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 800,
-              textTransform: 'uppercase', letterSpacing: '0.12em',
-              cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              boxShadow: isLive ? 'var(--red-glow)' : 'var(--cyan-glow)',
-              transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              position: 'relative', overflow: 'hidden',
-            }}
             onMouseEnter={e => {
               e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)'
-              e.currentTarget.style.boxShadow = isLive
-                ? '0 8px 30px rgba(255,45,85,0.4)'
-                : '0 8px 30px rgba(0,240,255,0.3)'
+              e.currentTarget.style.boxShadow = `0 8px 30px ${pc.glow}`
             }}
             onMouseLeave={e => {
               e.currentTarget.style.transform = 'translateY(0) scale(1)'
-              e.currentTarget.style.boxShadow = isLive ? 'var(--red-glow)' : 'var(--cyan-glow)'
-            }}
-            onTouchStart={e => {
-              e.currentTarget.style.transform = 'scale(0.98)'
-            }}
-            onTouchEnd={e => {
-              e.currentTarget.style.transform = 'scale(1)'
+              e.currentTarget.style.boxShadow = `0 4px 20px ${pc.glow}`
             }}
           >
-            <span style={{
-              position: 'absolute', top: 0, left: '-100%', width: '100%', height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-              transition: 'left 0.5s',
-            }} className="btn-shine" />
-            <i className={isLive ? 'fa-solid fa-play' : 'fa-solid fa-bolt'} style={{ fontSize: 14 }} />
+            <span className="btn-shine" />
+            <i className={isLive ? 'fa-solid fa-play' : 'fa-solid fa-bolt'} />
             {isLive ? 'Watch Live' : 'Join Match'}
-            <i className="fa-solid fa-arrow-right" style={{ fontSize: 11, opacity: 0.8 }} />
+    <span className="join-fee">{formatTK(match.entryFee)}</span>
+            <i className="fa-solid fa-arrow-right" />
           </button>
         </div>
       )}
 
-      {/* ═══ COMPLETED OVERLAY ═══ */}
       {isCompleted && (
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'rgba(10,10,15,0.7)',
-          backdropFilter: 'blur(2px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 20,
-        }}>
-          <div style={{
-            padding: '8px 20px',
-            borderRadius: 'var(--radius)',
-            background: 'var(--glass-bg)',
-            border: '1px solid var(--glass-border)',
-            fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 800,
-            color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em',
-          }}>
-            <i className="fa-solid fa-check-circle" style={{ marginRight: 8 }} />
-            Match Ended
-          </div>
+        <div className="completed-overlay">
+          <div className="completed-badge"><i className="fa-solid fa-flag-checkered" />Match Ended</div>
         </div>
       )}
     </div>

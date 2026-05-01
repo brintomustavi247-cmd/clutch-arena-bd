@@ -21,8 +21,8 @@
   box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 40px var(--card-glow);
 }
 
-/* Glow border effect */
 .match-card-glow { position: relative; }
+
 .card-glow-border {
   position: absolute;
   inset: -1px;
@@ -32,12 +32,11 @@
   transition: opacity 0.3s;
   z-index: -1;
 }
+
 .card-glow-border.active { opacity: 0.5; }
 
-/* Dim variant */
 .match-card-dim { opacity: 0.6; }
 
-/* Holographic shine */
 .holographic-shine {
   position: absolute;
   inset: 0;
@@ -53,7 +52,6 @@
   50% { background-position: -200% 0; }
 }
 
-/* Live pulse ring */
 .live-pulse-ring {
   position: absolute;
   inset: -2px;
@@ -70,7 +68,6 @@
   50% { opacity: 0.3; transform: scale(1.02); }
 }
 
-/* ─── HEADER ─── */
 .match-card-header {
   position: relative;
   height: 140px;
@@ -103,7 +100,6 @@
   background: linear-gradient(to bottom, transparent 40%, #14141f 100%);
 }
 
-/* Status Badge */
 .status-badge {
   position: absolute;
   top: 12px;
@@ -135,7 +131,6 @@
   50% { opacity: 0.3; }
 }
 
-/* Prize Badge */
 .prize-badge-wrapper {
   position: absolute;
   top: 12px;
@@ -164,7 +159,6 @@
   50% { transform: translateY(-3px); }
 }
 
-/* No Refund Badge */
 .no-refund-badge {
   position: absolute;
   top: 12px;
@@ -184,7 +178,6 @@
   gap: 4px;
 }
 
-/* Mode Badge */
 .mode-badge {
   position: absolute;
   bottom: 12px;
@@ -204,7 +197,6 @@
   text-transform: uppercase;
 }
 
-/* Slot Ring */
 .slot-ring-wrapper {
   position: absolute;
   bottom: 8px;
@@ -230,7 +222,6 @@
   color: #fff;
 }
 
-/* WhatsApp Share */
 .share-wrapper {
   position: absolute;
   top: 44px;
@@ -260,7 +251,6 @@
   box-shadow: 0 0 16px rgba(37, 211, 102, 0.4);
 }
 
-/* ─── CONTENT ─── */
 .match-card-content {
   padding: 16px 18px;
   position: relative;
@@ -280,7 +270,6 @@
   white-space: nowrap;
 }
 
-/* Countdown */
 .countdown-wrapper { margin-bottom: 12px; }
 
 .digital-countdown {
@@ -315,7 +304,6 @@
   font-size: 18px;
 }
 
-/* Meta Row */
 .match-meta-row {
   display: flex;
   align-items: center;
@@ -340,7 +328,6 @@
   background: #374151;
 }
 
-/* Avatar Stack */
 .match-avatars-row {
   display: flex;
   align-items: center;
@@ -403,7 +390,6 @@
   font-weight: 600;
 }
 
-/* Slot Progress */
 .slot-progress { margin-bottom: 14px; }
 
 .slot-track {
@@ -430,7 +416,6 @@
   color: #6b7280;
 }
 
-/* Per Kill Badge */
 .per-kill-badge {
   display: inline-flex;
   align-items: center;
@@ -447,7 +432,6 @@
   margin-bottom: 14px;
 }
 
-/* Prize Row */
 .prize-row {
   display: flex;
   justify-content: space-between;
@@ -491,7 +475,6 @@
   text-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
 }
 
-/* ─── ACTIONS ─── */
 .match-card-actions {
   padding: 14px 18px;
   background: #1a1a2e;
@@ -542,7 +525,6 @@
   font-weight: 700;
 }
 
-/* Particle Burst */
 .particle-burst {
   position: absolute;
   inset: 0;
@@ -566,7 +548,6 @@
   100% { transform: rotate(var(--angle, 0deg)) translateX(60px); opacity: 0; }
 }
 
-/* ─── COMPLETED OVERLAY ─── */
 .completed-overlay {
   position: absolute;
   inset: 0;
@@ -593,7 +574,6 @@
   gap: 8px;
 }
 
-/* ─── ANIMATIONS ─── */
 .fade-in {
   animation: fadeInUp 0.5s ease-out forwards;
   opacity: 0;
