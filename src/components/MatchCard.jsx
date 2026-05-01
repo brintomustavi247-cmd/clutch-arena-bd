@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useApp } from '../context'
 import { formatTK, slotPercent, getMatchPhase, getMatchCountdown } from '../utils'
-import './MatchCard.css' // ← Import CSS separately
+import './MatchCard.css'  // ← THIS LINE MUST EXIST
 
 function parseMatchTime(startTime) {
   if (!startTime) return null
