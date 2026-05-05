@@ -11,6 +11,7 @@ const NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [
   { id: 'admin-overview', label: 'Overview', icon: 'fa-solid fa-chart-pie', color: '#00f0ff' },
+  { id: 'admin-profit', label: 'Profit', icon: 'fa-solid fa-chart-line', color: '#22c55e' },
   { id: 'admin-create', label: 'Create', icon: 'fa-solid fa-circle-plus', color: '#a78bfa' },
   { id: 'admin-rooms', label: 'Rooms', icon: 'fa-solid fa-key', color: '#fbbf24' },
   { id: 'admin-results', label: 'Results', icon: 'fa-solid fa-clipboard-check', color: '#22c55e' },
@@ -19,6 +20,8 @@ const ADMIN_NAV_ITEMS = [
   { id: 'admin-payments', label: 'Payments', icon: 'fa-solid fa-credit-card', color: '#f59e0b' },
   { id: 'admin-owners', label: 'Owner', icon: 'fa-solid fa-crown', color: '#fbbf24' },
   { id: 'admin-activity', label: 'Activity', icon: 'fa-solid fa-clock-rotate-left', color: '#6c8cff' },
+  { id: 'admin-top-teams', label: 'Top Teams', icon: 'fa-solid fa-ranking-star', color: '#fbbf24' },
+  { id: 'admin-live', label: 'Live', icon: 'fa-solid fa-tower-broadcast', color: '#ef4444' },
 ]
 
 export default function MobileNav() {

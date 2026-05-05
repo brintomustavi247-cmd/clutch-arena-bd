@@ -2087,7 +2087,7 @@ function AdminUsers() {
            </button>
           )}
           {u.role !== 'owner' && (
-       <button onClick={() => dispatch({ type: 'TOGGLE_BAN', payload: u.id })}>
+           <button style={{ ...S.btnDanger, marginLeft: 6 }} onClick={() => dispatch({ type: u.banned ? 'UNBAN_USER' : 'BAN_USER', payload: u.id })}>
             <i className={u.banned ? "fa-solid fa-user-check" : "fa-solid fa-user-slash"}></i>
            </button>
           )}
