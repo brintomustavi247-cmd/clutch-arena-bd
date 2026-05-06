@@ -3,6 +3,7 @@ import { useApp } from '../context'
 import { formatTK, formatTKShort, calculateMatchEconomics, calculateResultPrize, calculateAllResultPrizes, getRoomUnlockCountdown, maxSlotsForMode, showToast } from '../utils'
 import { approveAddMoneyRequest, rejectAddMoneyRequest, getPlatformProfitStats, getTierFromXP, TIERS } from "../database"
 import { FF_MAPS, FF_MODES, FF_GAME_TYPES, KILL_REWARDS, RESULT_METHODS } from '../data'
+import { auth } from '../firebase'
 
 // ═══════════════════════════════════════════════════════════════════════
 // V7.1: PREMIUM CSS — BOLD NEON GAMING AESTHETIC (injected at runtime)
@@ -413,7 +414,6 @@ const S = {
   },
   td: {
     padding: '14px 14px',
-    borderBottom: 'none',
     fontSize: 13,
     wordBreak: 'break-word',
     background: 'rgba(255,255,255,0.02)',
@@ -3481,11 +3481,53 @@ export default function Admin() {
  const handleTab = (id) => navigate(id)
 
  return (
-  <div className="admin-panel" style={{ padding: mobile ? '16px' : '24px', maxWidth: 1200, margin: '0 auto' }}>
+ <div className="admin-panel" style={{ padding: mobile ? '16px 16px 100px' : '24px 28px', maxWidth: 1200, margin: '0 auto' }}>
    {/* ═══ V7.0: Scanline overlay ═══ */}
    <div className="admin-scanline" />
 
-   {/* ═══ V7.0: Premium Header Banner ═══ */}
+   {/* ═══ V7.2: Mobile profile + logout bar ═══ */}
+   {mobile && (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '10px 14px', marginBottom: 14,
+      paddingTop: 'calc(10px + env(safe-area-inset-top, 0px))',
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 14,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{
+          width: 34, height: 34, borderRadius: '50%',
+          background: 'linear-gradient(135deg, #6c8cff, #a78bfa)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, fontWeight: 800, color: '#fff',
+        }}>
+          {(currentUser?.name || currentUser?.displayName || currentUser?.username || '?').charAt(0)}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>{currentUser?.name || currentUser?.displayName || 'Admin'}</div>
+          <div style={{ fontSize: 10, color: '#fbbf24', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            {currentUser?.role === 'owner' ? 'Owner' : 'Admin'}
+          </div>
+        </div>
+      </div>
+      <button
+        onClick={() => { auth.signOut(); dispatch({ type: 'FIREBASE_LOGOUT' }) }}
+        style={{
+          padding: '8px 14px', borderRadius: 10,
+          border: '1px solid rgba(239,68,68,0.2)',
+          background: 'rgba(239,68,68,0.08)',
+          color: '#f87171', fontSize: 12, fontWeight: 700,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        <i className="fa-solid fa-right-from-bracket" style={{ fontSize: 11 }} />
+        Logout
+      </button>
+    </div>
+   )}
+   {/* ═══ Header Banner ═══ */}
    <div className="admin-header-banner glass-card-premium tilt-card">
     <div>
      <div className="admin-title">Clutch Arena</div>

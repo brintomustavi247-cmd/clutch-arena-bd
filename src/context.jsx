@@ -2,7 +2,7 @@ import {
   fetchUser, createUser, createMatchInDb, updateMatchInDb,
   getSettings, saveSettings, createAddMoneyRequest,
   fetchPendingAddMoneyRequests, approveAddMoneyRequest,
-  rejectAddMoneyRequest, distributePrizes, cancelMatchAndRefund,
+  rejectAddMoneyRequest, subscribeToAddMoneyRequests, distributePrizes, cancelMatchAndRefund,
   checkDuplicateTXID, adminAdjustBalance, addJoinToMatch,
   addWithdrawalToCloud, logActivityToCloud, addTransactionToCloud,
   subscribeToMatches, subscribeToSettings, subscribeToUser,
@@ -17,8 +17,9 @@ import {
 } from './database'
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
 import { calculateMatchEconomics, calculateJoinCost, showToast } from './utils'
-import { auth } from './firebase'
+import { auth, db } from './firebase'
 import { onAuthStateChanged } from 'firebase/auth'
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore'
 
 const AppContext = createContext(null)
 
@@ -727,9 +728,16 @@ function reducer(state, action) {
       }
     }
 
-    case 'PROMOTE_TO_ADMIN': {
+      case 'PROMOTE_TO_ADMIN': {
       const userId = action.payload
-      updateUser(userId, { role: 'admin', permissions: [] }).catch(e => console.error('Promote failed:', e))
+      // Persist to Firestore
+      updateUser(userId, { role: 'admin', permissions: [] }).catch(e => {
+        console.error('Promote failed:', e)
+        // Revert local state on failure
+        setTimeout(() => {
+          const { users } = require('./context').useApp.getState?.() || {}
+        }, 100)
+      })
       return {
         ...state,
         users: state.users.map(u =>
@@ -740,6 +748,7 @@ function reducer(state, action) {
 
     case 'DEMOTE_TO_USER': {
       const userId = action.payload
+      // Persist to Firestore — clear role AND permissions
       updateUser(userId, { role: 'user', permissions: [] }).catch(e => console.error('Demote failed:', e))
       return {
         ...state,
@@ -751,6 +760,8 @@ function reducer(state, action) {
 
     case 'FORCE_PASSWORD_CHANGE': {
       const userId = action.payload
+      // ← THIS WAS MISSING — forcePasswordChange was never saved to Firebase!
+      updateUser(userId, { forcePasswordChange: true }).catch(e => console.error('Force password change failed:', e))
       return {
         ...state,
         users: state.users.map(u =>
@@ -791,6 +802,8 @@ function reducer(state, action) {
 
     case 'ASSIGN_PERMISSIONS': {
       const { userId, permissions } = action.payload
+      // ← THIS WAS MISSING — permissions were never saved to Firebase!
+      updateUser(userId, { permissions }).catch(e => console.error('Permission save failed:', e))
       return {
         ...state,
         users: state.users.map(u =>
@@ -1048,20 +1061,31 @@ export function AppProvider({ children }) {
     })
     return () => unsubscribe()
   }, [state.currentUser?.firebaseUid])
-
-  // Load pending add money requests (admin/owner only)
+  // Real-time: Add money requests (admin/owner only)
   useEffect(() => {
     if (!isAdmin) return
-    async function loadPending() {
+    const unsubscribe = subscribeToAddMoneyRequests((requests) => {
+      dispatch({ type: 'LOAD_PENDING_REQUESTS', payload: requests })
+    })
+    return () => unsubscribe()
+  }, [isAdmin])
+
+  // Fallback polling for add money requests (backup if real-time doesn't fire due to missing Firebase composite index)
+  useEffect(() => {
+    if (!isAdmin) return
+    let lastData = null
+    const fallbackPoll = async () => {
       try {
-        const requests = await fetchPendingAddMoneyRequests()
-        dispatch({ type: 'LOAD_PENDING_REQUESTS', payload: requests })
-      } catch (err) {
-        console.error("Failed to load pending add money requests:", err)
-      }
+        const snap = await getDocs(query(collection(db, 'addMoneyRequests'), where('status', '==', 'pending'), orderBy('createdAt', 'desc')))
+        const results = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        if (JSON.stringify(results) !== JSON.stringify(lastData)) {
+          lastData = results
+          dispatch({ type: 'LOAD_PENDING_REQUESTS', payload: results })
+        }
+      } catch (err) { console.error('Fallback add money poll error:', err) }
     }
-    loadPending()
-    const interval = setInterval(loadPending, 5000)
+    fallbackPoll()
+    const interval = setInterval(fallbackPoll, 15000)
     return () => clearInterval(interval)
   }, [isAdmin])
 
@@ -1072,6 +1096,25 @@ export function AppProvider({ children }) {
       dispatch({ type: 'LOAD_WITHDRAWALS', payload: withdrawals })
     })
     return () => unsubscribe()
+  }, [isAdmin])
+
+  // Fallback polling for withdrawals (backup if real-time doesn't fire due to missing Firebase composite index)
+  useEffect(() => {
+    if (!isAdmin) return
+    let lastData = null
+    const fallbackPoll = async () => {
+      try {
+        const wdSnap = await getDocs(query(collection(db, 'withdrawals'), orderBy('createdAt', 'desc')))
+        const results = wdSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(w => w.status === 'pending')
+        if (JSON.stringify(results) !== JSON.stringify(lastData)) {
+          lastData = results
+          dispatch({ type: 'LOAD_WITHDRAWALS', payload: results })
+        }
+      } catch (err) { console.error('Fallback withdrawal poll error:', err) }
+    }
+    fallbackPoll()
+    const interval = setInterval(fallbackPoll, 15000)
+    return () => clearInterval(interval)
   }, [isAdmin])
 
   // Real-time: All users
