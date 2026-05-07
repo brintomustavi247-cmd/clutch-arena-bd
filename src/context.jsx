@@ -18,8 +18,8 @@ import {
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
 import { calculateMatchEconomics, calculateJoinCost, showToast } from './utils'
 import { auth, db } from './firebase'
-import { onAuthStateChanged } from 'firebase/auth'
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore'
+import { onAuthStateChanged } from 'firebase/auth'
 
 const AppContext = createContext(null)
 
@@ -1070,14 +1070,14 @@ export function AppProvider({ children }) {
     return () => unsubscribe()
   }, [isAdmin])
 
-  // Fallback polling for add money requests (backup if real-time doesn't fire due to missing Firebase composite index)
+  // Fallback polling for add money requests (simple query — no composite index needed)
   useEffect(() => {
     if (!isAdmin) return
     let lastData = null
     const fallbackPoll = async () => {
       try {
-        const snap = await getDocs(query(collection(db, 'addMoneyRequests'), where('status', '==', 'pending'), orderBy('createdAt', 'desc')))
-        const results = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        const snap = await getDocs(query(collection(db, 'addMoneyRequests'), orderBy('createdAt', 'desc')))
+        const results = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.status === 'pending')
         if (JSON.stringify(results) !== JSON.stringify(lastData)) {
           lastData = results
           dispatch({ type: 'LOAD_PENDING_REQUESTS', payload: results })

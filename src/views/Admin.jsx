@@ -4,213 +4,7 @@ import { formatTK, formatTKShort, calculateMatchEconomics, calculateResultPrize,
 import { approveAddMoneyRequest, rejectAddMoneyRequest, getPlatformProfitStats, getTierFromXP, TIERS } from "../database"
 import { FF_MAPS, FF_MODES, FF_GAME_TYPES, KILL_REWARDS, RESULT_METHODS } from '../data'
 import { auth } from '../firebase'
-
-// ═══════════════════════════════════════════════════════════════════════
-// V7.1: PREMIUM CSS — BOLD NEON GAMING AESTHETIC (injected at runtime)
-// ═══════════════════════════════════════════════════════════════════════
-if (typeof document !== 'undefined') {
-  const existingId = 'clutch-admin-v72-premium'
-  const old = document.getElementById(existingId)
-  if (old) old.remove()
-  const s = document.createElement('style')
-  s.id = existingId
-  s.textContent = `
-@keyframes v71Shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-@keyframes v71Pulse{0%,100%{opacity:1}50%{opacity:.5}}
-@keyframes v71Float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes v71Holo{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-@keyframes v71BorderPulse{0%,100%{border-color:rgba(139,92,246,.3);box-shadow:0 0 15px rgba(139,92,246,.15)}50%{border-color:rgba(139,92,246,.7);box-shadow:0 0 35px rgba(139,92,246,.35)}}
-@keyframes v71GreenPulse{0%,100%{border-color:rgba(34,197,94,.3);box-shadow:0 0 15px rgba(34,197,94,.15)}50%{border-color:rgba(34,197,94,.7);box-shadow:0 0 35px rgba(34,197,94,.35)}}
-@keyframes v71CyanPulse{0%,100%{border-color:rgba(0,212,255,.3);box-shadow:0 0 15px rgba(0,212,255,.15)}50%{border-color:rgba(0,212,255,.7);box-shadow:0 0 35px rgba(0,212,255,.35)}}
-@keyframes v71BgShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-@keyframes v71Scanline{0%{top:-10%}100%{top:110%}}
-@keyframes v71FadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes v71NeonFlicker{0%,100%{opacity:1}92%{opacity:1}93%{opacity:.4}94%{opacity:1}}
-@keyframes v71GlowText{0%,100%{text-shadow:0 0 8px rgba(139,92,246,.5),0 0 20px rgba(139,92,246,.2)}50%{text-shadow:0 0 16px rgba(139,92,246,.8),0 0 40px rgba(139,92,246,.4),0 0 60px rgba(99,102,241,.2)}}
-@keyframes v71Rainbow{0%{background-position:0% 50%}16%{background-position:100% 0%}33%{background-position:100% 100%}50%{background-position:0% 100%}66%{background-position:0% 0%}83%{background-position:100% 50%}100%{background-position:0% 50%}}
-
-/* ═══ ADMIN PANEL ═══ */
-.admin-panel{position:relative;min-height:100vh;background:rgba(8,8,24,.85)!important;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
-.admin-panel::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background-image:linear-gradient(rgba(139,92,246,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
-.admin-panel::after{content:'';position:fixed;top:-30%;right:-20%;width:70%;height:70%;background:radial-gradient(circle,rgba(139,92,246,.18) 0%,rgba(99,102,241,.08) 30%,transparent 70%);pointer-events:none;z-index:0;animation:v71BgShift 12s ease infinite;background-size:200% 200%}
-
-/* ═══ SCANLINE ═══ */
-.admin-scanline{position:fixed;left:0;width:100%;height:6px;background:linear-gradient(90deg,transparent 0%,rgba(139,92,246,.15) 30%,rgba(0,212,255,.2) 50%,rgba(139,92,246,.15) 70%,transparent 100%);z-index:1;pointer-events:none;animation:v71Scanline 6s linear infinite;box-shadow:0 0 20px rgba(139,92,246,.1),0 0 40px rgba(139,92,246,.05)}
-
-/* ═══ HEADER BANNER ═══ */
-.admin-header-banner{position:relative;display:flex;align-items:center;justify-content:space-between;padding:32px 36px!important;margin-bottom:32px;border-radius:20px!important;overflow:hidden;z-index:2;background:linear-gradient(135deg,rgba(139,92,246,.25) 0%,rgba(99,102,241,.2) 25%,rgba(0,212,255,.15) 50%,rgba(251,191,36,.1) 75%,rgba(139,92,246,.25) 100%)!important;background-size:400% 400%!important;animation:v71BgShift 8s ease infinite!important;border:2px solid rgba(139,92,246,.4)!important;box-shadow:0 0 30px rgba(139,92,246,.2),0 8px 40px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.1)!important}
-.admin-header-banner::before{content:'';position:absolute;top:0;left:-100%;width:300%;height:100%;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.06) 40%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.06) 60%,transparent 100%);animation:v71Shimmer 4s ease-in-out infinite;pointer-events:none}
-.admin-header-banner::after{content:'PREMIUM v7.2';position:absolute;top:12px;right:16px;padding:3px 10px;border-radius:6px;font-size:9px;font-weight:900;letter-spacing:1.5px;color:#a78bfa;background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.3);text-transform:uppercase;font-family:monospace;animation:v71NeonFlicker 4s ease infinite}
-
-/* ═══ TITLE ═══ */
-.admin-title{font-family:'Orbitron','Rajdhani',sans-serif!important;font-size:28px!important;font-weight:900!important;background:linear-gradient(135deg,#fff 0%,#c4b5fd 30%,#a78bfa 50%,#00f0ff 80%,#fff 100%)!important;background-size:200% 200%!important;animation:v71Rainbow 6s ease infinite!important;-webkit-background-clip:text!important;-webkit-text-fill-color:transparent!important;background-clip:text!important;text-transform:uppercase!important;letter-spacing:3px!important;margin:0!important;position:relative;z-index:1}
-.admin-subtitle{font-size:13px!important;color:rgba(167,139,250,.7)!important;font-weight:700!important;letter-spacing:2px!important;text-transform:uppercase!important;margin-top:6px!important;position:relative;z-index:1;animation:v71GlowText 3s ease-in-out infinite}
-.admin-online-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:999px;background:rgba(34,197,94,.2)!important;border:2px solid rgba(34,197,94,.5)!important;font-size:12px;font-weight:800;color:#4ade80!important;letter-spacing:.5px;position:relative;z-index:1;animation:v71Pulse 2s ease-in-out infinite;box-shadow:0 0 20px rgba(34,197,94,.15)!important}
-
-/* ═══ GLASS CARDS ═══ */
-.glass-card-premium{background:linear-gradient(180deg,rgba(255,255,255,.08) 0%,rgba(255,255,255,.02) 100%)!important;border:1.5px solid rgba(139,92,246,.2)!important;border-radius:20px!important;backdrop-filter:blur(20px)!important;-webkit-backdrop-filter:blur(20px)!important;box-shadow:0 8px 32px rgba(0,0,0,.4),0 0 0 1px rgba(139,92,246,.05)!important;overflow:hidden;transition:all .4s cubic-bezier(.34,1.56,.64,1)!important;position:relative;z-index:2;animation:v71FadeIn .5s ease forwards}
-.glass-card-premium:hover{border-color:rgba(139,92,246,.5)!important;box-shadow:0 16px 48px rgba(0,0,0,.5),0 0 30px rgba(139,92,246,.15),0 0 60px rgba(139,92,246,.08)!important;transform:translateY(-4px)!important}
-.glass-card-premium::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(139,92,246,.4),rgba(0,212,255,.4),rgba(139,92,246,.4),transparent);opacity:0;transition:opacity .3s}
-.glass-card-premium:hover::after{opacity:1}
-
-/* ═══ HOLO CARD ═══ */
-.holo-card{background:linear-gradient(135deg,rgba(139,92,246,.12) 0%,rgba(0,212,255,.08) 25%,rgba(251,191,36,.06) 50%,rgba(34,197,94,.08) 75%,rgba(139,92,246,.12) 100%)!important;background-size:200% 200%!important;animation:v71Holo 6s ease infinite!important;border:1.5px solid rgba(139,92,246,.25)!important;border-radius:16px!important;position:relative;overflow:hidden}
-.holo-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 20%,rgba(139,92,246,.1) 40%,rgba(0,212,255,.08) 60%,transparent 80%);background-size:200% 200%;animation:v71Holo 4s ease infinite reverse;pointer-events:none}
-
-/* ═══ TILT CARD ═══ */
-.tilt-card{transition:transform .4s cubic-bezier(.34,1.56,.64,1)!important;transform-style:preserve-3d!important;will-change:transform}
-.tilt-card:hover{transform:perspective(800px) rotateY(4deg) rotateX(-3deg) translateY(-6px) scale(1.02)!important;box-shadow:0 24px 60px rgba(0,0,0,.4),0 0 40px rgba(139,92,246,.15)!important}
-
-/* ═══ GLOW BORDERS ═══ */
-.glow-border-purple{border:2px solid rgba(139,92,246,.4)!important;animation:v71BorderPulse 2.5s ease-in-out infinite!important}
-.glow-border-green{border:2px solid rgba(34,197,94,.4)!important;animation:v71GreenPulse 2.5s ease-in-out infinite!important}
-.glow-border-cyan{border:2px solid rgba(0,212,255,.4)!important;animation:v71CyanPulse 2.5s ease-in-out infinite!important}
-.glow-border-gold{border:2px solid rgba(251,191,36,.4)!important;box-shadow:0 0 25px rgba(251,191,36,.2),inset 0 1px 0 rgba(255,255,255,.08)!important;animation:v71BorderPulse 2.5s ease-in-out infinite!important}
-.glow-border-red{border:2px solid rgba(239,68,68,.4)!important;box-shadow:0 0 25px rgba(239,68,68,.2),inset 0 1px 0 rgba(255,255,255,.08)!important;animation:v71BorderPulse 2.5s ease-in-out infinite!important}
-
-/* ═══ STAT CARD PREMIUM ═══ */
-.stat-card-premium{position:relative!important;overflow:hidden!important;background:rgba(255,255,255,.04)!important;border:1px solid rgba(139,92,246,.15)!important;border-radius:16px!important;border-left:4px solid rgba(139,92,246,.6)!important;backdrop-filter:blur(12px)!important;transition:all .4s cubic-bezier(.34,1.56,.64,1)!important}
-.stat-card-premium:hover{transform:translateY(-4px) scale(1.02)!important;border-color:rgba(139,92,246,.4)!important;border-left-color:rgba(139,92,246,.8)!important;box-shadow:0 12px 40px rgba(139,92,246,.2),inset 0 1px 0 rgba(255,255,255,.08)!important}
-
-/* ═══ ANIMATIONS ═══ */
-.counter-roll{animation:v71FadeIn .6s cubic-bezier(.34,1.56,.64,1) forwards!important}
-.float-anim{animation:v71Float 3s ease-in-out infinite!important}
-.admin-online-pulse{animation:v71Pulse 2s ease-in-out infinite!important}
-
-/* ═══ INPUTS & FOCUS ═══ */
-.admin-panel input:focus,.admin-panel select:focus{border-color:rgba(139,92,246,.6)!important;box-shadow:0 0 0 3px rgba(139,92,246,.15),0 0 20px rgba(139,92,246,.1)!important;outline:none!important}
-
-/* ═══ BUTTONS ═══ */
-.admin-panel button{transition:all .3s cubic-bezier(.34,1.56,.64,1)!important}
-.admin-panel button:hover{transform:translateY(-2px)!important;box-shadow:0 4px 16px rgba(139,92,246,.15)!important}
-.admin-panel button:active{transform:translateY(0) scale(.97)!important}
-
-/* ═══ TAB SYSTEM ═══ */
-.tab-pill-container{display:flex!important;flex-wrap:wrap!important;gap:6px!important;margin-bottom:28px!important;padding:10px!important;border-radius:16px!important;background:rgba(0,0,0,.4)!important;border:1.5px solid rgba(139,92,246,.15)!important;backdrop-filter:blur(16px)!important;box-shadow:0 4px 24px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.05)!important;position:relative;z-index:2}
-.tab-pill{display:flex!important;align-items:center!important;gap:8px!important;padding:11px 22px!important;border-radius:12px!important;border:1.5px solid transparent!important;background:rgba(255,255,255,.03)!important;color:rgba(160,160,180,.8)!important;font-weight:700!important;font-size:12px!important;cursor:pointer!important;white-space:nowrap!important;transition:all .3s cubic-bezier(.34,1.56,.64,1)!important;font-family:'Rajdhani',sans-serif!important;letter-spacing:.5px!important;position:relative;overflow:hidden}
-.tab-pill:hover{background:rgba(255,255,255,.08)!important;color:#fff!important;transform:translateY(-2px)!important;border-color:rgba(255,255,255,.1)!important}
-.tab-pill.active{background:linear-gradient(135deg,var(--tab-color,rgba(139,92,246,.25)),var(--tab-color-2,rgba(139,92,246,.1)))!important;border-color:var(--tab-border,rgba(139,92,246,.5))!important;color:var(--tab-text,#c4b5fd)!important;box-shadow:0 4px 24px var(--tab-shadow,rgba(139,92,246,.25)),inset 0 1px 0 rgba(255,255,255,.08)!important;transform:translateY(-2px)!important}
-.tab-pill.active::after{content:'';position:absolute;bottom:0;left:15%;width:70%;height:3px;background:linear-gradient(90deg,transparent,var(--tab-text,#a78bfa),transparent);border-radius:2px}
-
-/* ═══ SMART ALERTS ═══ */
-.smart-alert-card{display:flex!important;align-items:center!important;gap:12px!important;padding:14px 18px!important;border-radius:12px!important;margin-bottom:8px!important;transition:all .3s ease!important;backdrop-filter:blur(8px)!important}
-.smart-alert-card:hover{transform:translateX(4px)!important}
-.smart-alert-btn{padding:6px 14px!important;border-radius:8px!important;border:none!important;cursor:pointer!important;font-weight:800!important;font-size:10px!important;text-transform:uppercase!important;letter-spacing:.8px!important;transition:all .2s ease!important;white-space:nowrap!important;flex-shrink:0!important}
-.smart-alert-btn:hover{transform:scale(1.05)!important}
-.tier-badge-mini{display:inline-flex!important;align-items:center!important;gap:4px!important;padding:3px 10px!important;border-radius:6px!important;font-size:9px!important;font-weight:800!important;text-transform:uppercase!important;letter-spacing:.5px!important;white-space:nowrap!important}
-
-/* ═══ SECTION CARDS ═══ */
-.admin-panel div[style*="border-radius: 20px"],.admin-panel div[style*="border-radius:20px"]{backdrop-filter:blur(16px)!important;-webkit-backdrop-filter:blur(16px)!important;border:1.5px solid rgba(139,92,246,.12)!important;position:relative;z-index:2;animation:v71FadeIn .5s ease forwards}
-.admin-panel div[style*="rgba(255,255,255,0.055)"],.admin-panel div[style*="rgba(255, 255, 255, 0.055)"]{border:1.5px solid rgba(139,92,246,.18)!important;box-shadow:0 8px 32px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06)!important}
-.admin-panel div[style*="rgba(34,197,94,0.12)"],.admin-panel div[style*="rgba(34, 197, 94, 0.12)"]{border:2px solid rgba(34,197,94,.4)!important;box-shadow:0 8px 40px rgba(34,197,94,.15),0 0 60px rgba(34,197,94,.08),inset 0 1px 0 rgba(255,255,255,.08)!important;animation:v71GreenPulse 3s ease-in-out infinite!important}
-.admin-panel div[style*="rgba(0,212,255,0.08)"],.admin-panel div[style*="rgba(0, 212, 255, 0.08)"]{border:1.5px solid rgba(0,212,255,.3)!important;box-shadow:0 4px 24px rgba(0,212,255,.12),0 0 40px rgba(0,212,255,.06)!important}
-
-/* ═══ SCROLLBAR ═══ */
-.admin-panel::-webkit-scrollbar{width:6px}
-.admin-panel::-webkit-scrollbar-track{background:transparent}
-.admin-panel::-webkit-scrollbar-thumb{background:rgba(139,92,246,.4);border-radius:3px}
-.admin-panel::-webkit-scrollbar-thumb:hover{background:rgba(139,92,246,.7)}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   V7.2: MOBILE PERFORMANCE — Kill all heavy animations on mobile
-   ═══════════════════════════════════════════════════════════════════════ */
-@media(max-width:768px){
-  /* Kill animated backgrounds */
-  .admin-panel::before,.admin-panel::after{display:none!important}
-
-  /* Kill scanline entirely */
-  .admin-scanline{display:none!important}
-
-  /* Kill header animations, shimmer, flicker badge */
-  .admin-header-banner{
-    animation:none!important;
-    background-size:100% 100%!important;
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-    padding:20px 18px!important;
-    flex-direction:column;
-    align-items:flex-start;
-    gap:12px;
-  }
-  .admin-header-banner::before{display:none!important}
-  .admin-header-banner::after{display:none!important}
-  .admin-header-banner .admin-title{font-size:20px!important}
-
-  /* Kill title animations */
-  .admin-title{animation:none!important;background-size:100% 100%!important}
-  .admin-subtitle{animation:none!important;text-shadow:none!important}
-  .admin-online-badge{animation:none!important}
-  .admin-online-pulse{animation:none!important}
-  .float-anim{animation:none!important}
-
-  /* Kill backdrop-filter on ALL cards — huge GPU savings */
-  .glass-card-premium{
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-    animation:none!important;
-    contain:layout style paint;
-  }
-  .glass-card-premium:hover{transform:none!important}
-  .glass-card-premium::after{display:none!important}
-
-  /* Kill holo card animations */
-  .holo-card{animation:none!important;background-size:100% 100%!important}
-  .holo-card::before{display:none!important}
-
-  /* Kill all glow border pulse animations */
-  .glow-border-purple,.glow-border-green,.glow-border-cyan,.glow-border-gold,.glow-border-red{
-    animation:none!important;
-    box-shadow:none!important;
-  }
-
-  /* Kill smart alert backdrop */
-  .smart-alert-card{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-
-  /* Kill tab container backdrop */
-  .tab-pill-container{
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-    flex-wrap:nowrap!important;
-    gap:4px!important;
-    padding:8px!important;
-    margin-bottom:16px!important;
-    overflow-x:auto!important;
-    scrollbar-width:none!important;
-  }
-  .tab-pill-container::-webkit-scrollbar{display:none!important}
-  .tab-pill{padding:8px 12px!important;min-width:fit-content!important}
-  .tab-pill:hover{transform:none!important}
-
-  /* Kill section card backdrop + animations */
-  .admin-panel div[style*="border-radius: 20px"],
-  .admin-panel div[style*="border-radius:20px"]{
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-    animation:none!important;
-  }
-  .admin-panel div[style*="rgba(34,197,94,0.12)"],
-  .admin-panel div[style*="rgba(34, 197, 94, 0.12)"]{
-    animation:none!important;
-  }
-
-  /* Kill stat card backdrop */
-  .stat-card-premium{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-  .stat-card-premium:hover{transform:none!important}
-
-  /* Prevent 300ms tap delay on all interactive elements */
-  .admin-panel button,
-  .admin-panel input,
-  .admin-panel select,
-  .admin-panel textarea{
-    touch-action:manipulation;
-  }
-
-  /* Prevent text selection on tabs */
-  .tab-pill{user-select:none;-webkit-user-select:none}
-}
-  `
-  document.head.appendChild(s)
-}
+import '../admin-premium.css'
 // ★ Inline fallback — remove this after updating utils.js
 function isTeamMode(mode) {
  return mode === 'Duo' || mode === 'Squad' || mode === 'Clash Squad'
@@ -2418,7 +2212,7 @@ function AdminFinance() {
  const timeAgo = (isoStr) => {
   if (!isoStr) return '—'
   const diff = Date.now() - new Date(isoStr).getTime()
-  const mins = Math
+  const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'Just now'
   if (mins < 60) return `${mins}m ago`
   const hrs = Math.floor(mins / 60)
@@ -3461,7 +3255,7 @@ const ADMIN_TABS = [
 const VALID_ADMIN_TABS = new Set(ADMIN_TABS.map(t => t.id))
 
 export default function Admin() {
- const { state, navigate } = useApp()
+ const { state, dispatch, navigate } = useApp()
  const mobile = useIsMobile()
 
  const currentUser = state.currentUser || state.users.find(u => u.id === state.currentUserId)
@@ -3511,20 +3305,50 @@ export default function Admin() {
           </div>
         </div>
       </div>
-      <button
-        onClick={() => { auth.signOut(); dispatch({ type: 'FIREBASE_LOGOUT' }) }}
-        style={{
-          padding: '8px 14px', borderRadius: 10,
-          border: '1px solid rgba(239,68,68,0.2)',
-          background: 'rgba(239,68,68,0.08)',
-          color: '#f87171', fontSize: 12, fontWeight: 700,
-          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-          WebkitTapHighlightColor: 'transparent',
-        }}
-      >
-        <i className="fa-solid fa-right-from-bracket" style={{ fontSize: 11 }} />
-        Logout
-      </button>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button
+          onClick={() => navigate('profile')}
+          style={{
+            padding: '8px 12px', borderRadius: 10,
+            border: '1px solid rgba(99,102,241,0.2)',
+            background: 'rgba(99,102,241,0.08)',
+            color: '#818cf8', fontSize: 11, fontWeight: 700,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <i className="fa-solid fa-user" style={{ fontSize: 10 }} />
+          Profile
+        </button>
+        <button
+          onClick={() => navigate('settings')}
+          style={{
+            padding: '8px 12px', borderRadius: 10,
+            border: '1px solid rgba(139,92,246,0.2)',
+            background: 'rgba(139,92,246,0.08)',
+            color: '#a78bfa', fontSize: 11, fontWeight: 700,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <i className="fa-solid fa-gear" style={{ fontSize: 10 }} />
+          Settings
+        </button>
+        <button
+          onClick={() => { auth.signOut(); dispatch({ type: 'FIREBASE_LOGOUT' }) }}
+          style={{
+            padding: '8px 12px', borderRadius: 10,
+            border: '1px solid rgba(239,68,68,0.2)',
+            background: 'rgba(239,68,68,0.08)',
+            color: '#f87171', fontSize: 11, fontWeight: 700,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <i className="fa-solid fa-right-from-bracket" style={{ fontSize: 10 }} />
+          Logout
+        </button>
+      </div>
     </div>
    )}
    {/* ═══ Header Banner ═══ */}
@@ -3534,8 +3358,7 @@ export default function Admin() {
      <div className="admin-subtitle">Admin Control Center</div>
     </div>
     <div className="admin-online-badge">
-     <span style={{ marginRight: 4 }}>Online</span>
-     <i className="fa-solid fa-signal" style={{ fontSize: 10 }} />
+     <span>🟢 Live</span>
     </div>
    </div>
 
